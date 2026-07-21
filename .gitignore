@@ -1,0 +1,31 @@
+# Flutter / Dart generated
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+coverage/
+**/GeneratedPluginRegistrant.java
+
+# FVM cache (versi proyek tetap disimpan di .fvmrc)
+.fvm/
+
+# Android generated and local secrets
+android/.gradle/
+android/.kotlin/
+android/local.properties
+android/key.properties
+*.jks
+*.keystore
+
+# IDE / OS / temporary files
+.idea/
+*.iml
+.DS_Store
+*.log
+tmp/
+
+# Personal agent settings
+.claude/settings.local.json

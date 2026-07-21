@@ -1,0 +1,314 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <ImageView
+        android:id="@+id/widget_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:contentDescription="@null"
+        android:scaleType="fitXY" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="28dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/widget_bulan"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:text="Duit Ges"
+                android:textSize="11sp" />
+
+            <TextView
+                android:id="@+id/widget_status"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:maxLines="1"
+                android:textSize="10sp" />
+
+            <TextView
+                android:id="@+id/widget_saldo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:text="Rp 0"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:layout_marginTop="6dp"
+            android:background="@drawable/widget_panel_bg"
+            android:orientation="horizontal"
+            android:padding="3dp">
+
+            <TextView
+                android:id="@+id/widget_type_expense"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@drawable/widget_tab_selected"
+                android:contentDescription="Pilih pengeluaran"
+                android:gravity="center"
+                android:text="Pengeluaran"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/widget_type_income"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:contentDescription="Pilih pemasukan"
+                android:gravity="center"
+                android:text="Pemasukan"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="18dp"
+            android:layout_marginTop="6dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/widget_category_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Kategori"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/widget_category_page"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="1/1"
+                android:textSize="9sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="66dp"
+            android:layout_marginTop="2dp"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <LinearLayout android:id="@+id/widget_category_0" style="@style/WidgetCategory">
+                <ImageView android:id="@+id/widget_category_icon_0" style="@style/WidgetCategoryIcon" />
+                <TextView android:id="@+id/widget_category_label_0" style="@style/WidgetCategoryLabel" />
+            </LinearLayout>
+
+            <LinearLayout android:id="@+id/widget_category_1" style="@style/WidgetCategory">
+                <ImageView android:id="@+id/widget_category_icon_1" style="@style/WidgetCategoryIcon" />
+                <TextView android:id="@+id/widget_category_label_1" style="@style/WidgetCategoryLabel" />
+            </LinearLayout>
+
+            <LinearLayout android:id="@+id/widget_category_2" style="@style/WidgetCategory">
+                <ImageView android:id="@+id/widget_category_icon_2" style="@style/WidgetCategoryIcon" />
+                <TextView android:id="@+id/widget_category_label_2" style="@style/WidgetCategoryLabel" />
+            </LinearLayout>
+
+            <LinearLayout android:id="@+id/widget_category_3" style="@style/WidgetCategory">
+                <ImageView android:id="@+id/widget_category_icon_3" style="@style/WidgetCategoryIcon" />
+                <TextView android:id="@+id/widget_category_label_3" style="@style/WidgetCategoryLabel" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/widget_category_next"
+                style="@style/WidgetCategory"
+                android:contentDescription="Kategori berikutnya">
+                <ImageView android:id="@+id/widget_category_next_icon" style="@style/WidgetCategoryIcon" />
+                <TextView
+                    android:id="@+id/widget_category_next_label"
+                    style="@style/WidgetCategoryLabel"
+                    android:text="Lainnya" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:layout_marginTop="6dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:id="@+id/widget_wallet"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@drawable/widget_panel_bg"
+                android:contentDescription="Ganti dompet"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="9dp">
+
+                <ImageView
+                    android:id="@+id/widget_wallet_icon"
+                    android:layout_width="34dp"
+                    android:layout_height="34dp"
+                    android:contentDescription="@null" />
+
+                <TextView
+                    android:id="@+id/widget_wallet_label"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="7dp"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="Tunai"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/widget_wallet_arrow"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textSize="22sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:gravity="center_vertical|end"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/widget_amount_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Nominal"
+                    android:textSize="9sp" />
+
+                <TextView
+                    android:id="@+id/widget_amount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="start"
+                    android:maxLines="1"
+                    android:text="0"
+                    android:textSize="29sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="8dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="horizontal">
+
+                <TextView android:id="@+id/widget_key_7" style="@style/WidgetKey" android:text="7" />
+                <TextView android:id="@+id/widget_key_8" style="@style/WidgetKey" android:text="8" />
+                <TextView android:id="@+id/widget_key_9" style="@style/WidgetKey" android:text="9" />
+                <TextView android:id="@+id/widget_key_back" style="@style/WidgetKey" android:contentDescription="Hapus satu angka" android:text="⌫" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_marginTop="6dp"
+                android:layout_weight="1"
+                android:orientation="horizontal">
+
+                <TextView android:id="@+id/widget_key_4" style="@style/WidgetKey" android:text="4" />
+                <TextView android:id="@+id/widget_key_5" style="@style/WidgetKey" android:text="5" />
+                <TextView android:id="@+id/widget_key_6" style="@style/WidgetKey" android:text="6" />
+                <TextView android:id="@+id/widget_key_clear" style="@style/WidgetKey" android:contentDescription="Kosongkan nominal" android:text="C" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_marginTop="6dp"
+                android:layout_weight="2"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="3"
+                    android:orientation="vertical">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:orientation="horizontal">
+
+                        <TextView android:id="@+id/widget_key_1" style="@style/WidgetKey" android:text="1" />
+                        <TextView android:id="@+id/widget_key_2" style="@style/WidgetKey" android:text="2" />
+                        <TextView android:id="@+id/widget_key_3" style="@style/WidgetKey" android:text="3" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_marginTop="6dp"
+                        android:layout_weight="1"
+                        android:orientation="horizontal">
+
+                        <TextView android:id="@+id/widget_key_0" style="@style/WidgetKey" android:text="0" />
+                        <TextView android:id="@+id/widget_key_000" style="@style/WidgetKeyWide" android:text="000" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <FrameLayout
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="6dp"
+                    android:layout_weight="1">
+
+                    <ImageView
+                        android:id="@+id/widget_save_background"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:contentDescription="@null"
+                        android:scaleType="fitXY" />
+
+                    <TextView
+                        android:id="@+id/widget_save"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:contentDescription="Simpan transaksi"
+                        android:gravity="center"
+                        android:text="Simpan"
+                        android:textColor="#FFFFFFFF"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+                </FrameLayout>
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

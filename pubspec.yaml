@@ -1,0 +1,134 @@
+name: duit_ges
+description: "Aplikasi pencatat keuangan pribadi untuk Android."
+# The following line prevents the package from being accidentally published to
+# pub.dev using `flutter pub publish`. This is preferred for private packages.
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+# The following defines the version and build number for your application.
+# A version number is three numbers separated by dots, like 1.2.43
+# followed by an optional build number separated by a +.
+# Both the version and the builder number may be overridden in flutter
+# build by specifying --build-name and --build-number, respectively.
+# In Android, build-name is used as versionName while build-number used as versionCode.
+# Read more about Android versioning at https://developer.android.com/studio/publish/versioning
+# In iOS, build-name is used as CFBundleShortVersionString while build-number is used as CFBundleVersion.
+# Read more about iOS versioning at
+# https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
+# In Windows, build-name is used as the major, minor, and patch parts
+# of the product and file versions while build-number is used as the build suffix.
+version: 1.0.5+4007
+
+environment:
+  sdk: ^3.12.2
+
+# Dependencies specify other packages that your package needs in order to work.
+# To automatically upgrade your package dependencies to the latest versions
+# consider running `flutter pub upgrade --major-versions`. Alternatively,
+# dependencies can be manually updated by changing the version numbers below to
+# the latest version available on pub.dev. To see which dependencies have newer
+# versions available, run `flutter pub outdated`.
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # The following adds the Cupertino Icons font to your application.
+  # Use with the CupertinoIcons class for iOS style icons.
+  # Database lokal SQLite di HP
+  sqflite: ^2.4.2
+  # Bantu gabungin path file database
+  path: ^1.9.0
+  # State management: nyebarin data transaksi ke semua screen
+  provider: ^6.1.2
+  # Format angka jadi "Rp 50.000" dan tanggal bahasa Indonesia
+  intl: ^0.20.2
+  # Pie chart buat layar statistik
+  fl_chart: ^1.0.0
+  # Nyimpen preferensi user (warna tema, dark mode) permanen di HP
+  shared_preferences: ^2.3.0
+  # Bikin file Excel (.xlsx) buat export data
+  excel: ^4.0.6
+  archive: ^3.6.1
+  # Nyari folder temporary di HP buat naruh file export
+  path_provider: ^2.1.4
+  # Buka share sheet Android (kirim file ke WA/Drive/dll)
+  share_plus: ^13.2.1
+  # Pilih file dari HP buat restore backup
+  file_selector: ^1.1.0
+  # Hash PIN biar ga kesimpen sebagai teks polos
+  crypto: ^3.0.5
+  # Ambil foto struk dari kamera/galeri
+  image_picker: ^1.1.2
+  flutter_local_notifications: ^22.0.1
+  timezone: ^0.11.1
+  flutter_timezone: ^5.1.0
+  home_widget: ^0.9.3
+  google_mlkit_text_recognition: ^0.16.0
+  video_player: ^2.13.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # Generate icon launcher Android dari file PNG di assets/icon/
+  flutter_launcher_icons: ^0.14.3
+
+  # The "flutter_lints" package below contains a set of recommended lints to
+  # encourage good coding practices. The lint set provided by the package is
+  # activated in the `analysis_options.yaml` file located at the root of your
+  # package. See that file for information about deactivating specific lint
+  # rules and activating additional ones.
+  flutter_lints: ^6.0.0
+  sqflite_common_ffi: ^2.4.2
+flutter_launcher_icons:
+  android: "ic_launcher"
+  ios: false
+  image_path: "assets/icon/icon.png"
+  adaptive_icon_background: "#FFE080"
+  adaptive_icon_foreground: "assets/icon/icon.png"
+  adaptive_icon_foreground_inset: 16
+
+# For information on the generic Dart part of this file, see the
+# following page: https://dart.dev/tools/pub/pubspec
+
+# The following section is specific to Flutter packages.
+flutter:
+
+  # The following line ensures that the Material Icons font is
+  # included with your application, so that you can use the icons in
+  # the material Icons class.
+  uses-material-design: true
+
+  assets:
+    - assets/theme/
+    - assets/theme/cat/
+    - assets/theme/cat_blue/
+    - assets/theme/cat_yellow/
+    - assets/theme/duck/
+    - assets/theme/duck_blue/
+    - assets/theme/duck_pink/
+    - assets/theme/anya/
+    - assets/theme/jjk/
+    - assets/theme/frieren/
+    - assets/theme/frieren_rial/
+    - assets/theme/spongebob/
+    - assets/theme/jjk2/
+    - assets/theme/call_duck/
+
+  # Pilihan font app (bisa diganti user di Setelan) — semua variable
+  # font, dibundel lokal biar full offline, ga nunggu download dari
+  # internet kayak package google_fonts default.
+  fonts:
+    - family: PlusJakartaSans
+      fonts:
+        - asset: assets/fonts/PlusJakartaSans.ttf
+        - asset: assets/fonts/PlusJakartaSans-Italic.ttf
+          style: italic
+    - family: Fredoka
+      fonts:
+        - asset: assets/fonts/Fredoka.ttf
+    - family: Baloo2
+      fonts:
+        - asset: assets/fonts/Baloo2.ttf
+    - family: Quicksand
+      fonts:
+        - asset: assets/fonts/Quicksand.ttf

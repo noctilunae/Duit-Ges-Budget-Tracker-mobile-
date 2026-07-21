@@ -1,0 +1,4 @@
+storePassword=GANTI_PASSWORD_KEYSTORE
+keyPassword=GANTI_PASSWORD_KEY
+keyAlias=duit-nia
+storeFile=app/upload-keystore.jks
