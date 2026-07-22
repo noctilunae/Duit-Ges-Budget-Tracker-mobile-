@@ -542,6 +542,7 @@ class SettingsProvider extends ChangeNotifier {
   int _monthStartDay = 1;
   int _trendMonths = 6;
   AppFont _font = AppFont.jakarta;
+  double _textScale = 1;
   String _themeId = 'klasik';
   String? _toneId;
   String? _pinHash;
@@ -587,6 +588,7 @@ class SettingsProvider extends ChangeNotifier {
   int get monthStartDay => _monthStartDay;
   int get trendMonths => _trendMonths;
   AppFont get font => _font;
+  double get textScale => _textScale;
   bool get ready => _ready;
 
   ThemePreset get preset => themePresets.firstWhere(
@@ -665,6 +667,7 @@ class SettingsProvider extends ChangeNotifier {
     if (savedFont != null) {
       _font = AppFont.values.asNameMap()[savedFont] ?? _font;
     }
+    _textScale = (prefs.getDouble('textScale') ?? 1).clamp(0.8, 1.4);
     _pinHash = prefs.getString('pinHash');
     _hideBalance = prefs.getBool('hideBalance') ?? false;
     _hideWallets = prefs.getBool('hideWallets') ?? false;
@@ -862,6 +865,13 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('font', value.name);
+  }
+
+  Future<void> setTextScale(double value) async {
+    _textScale = value.clamp(0.8, 1.4);
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('textScale', _textScale);
   }
 
   Future<void> setAccent(Color color) async {

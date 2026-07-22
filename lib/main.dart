@@ -60,6 +60,7 @@ class DuitGesApp extends StatelessWidget {
             SettingsProvider,
             ({
               String font,
+              double textScale,
               Color accent,
               List<Color> light,
               List<Color> dark,
@@ -70,6 +71,7 @@ class DuitGesApp extends StatelessWidget {
           >(
             selector: (_, settings) => (
               font: settings.font.family,
+              textScale: settings.textScale,
               accent: settings.accent,
               light: settings.lightBackground,
               dark: settings.darkBackground,
@@ -80,6 +82,12 @@ class DuitGesApp extends StatelessWidget {
             builder: (context, settings, _) => MaterialApp(
               title: 'Duit Ges',
               debugShowCheckedModeBanner: false,
+              builder: (context, child) => MediaQuery(
+                data: MediaQuery.of(
+                  context,
+                ).copyWith(textScaler: TextScaler.linear(settings.textScale)),
+                child: child!,
+              ),
               theme: ThemeData(
                 useMaterial3: true,
                 fontFamily: settings.font,

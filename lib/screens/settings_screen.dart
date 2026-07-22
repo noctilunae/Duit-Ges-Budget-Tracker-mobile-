@@ -150,6 +150,46 @@ class SettingsScreen extends StatelessWidget {
                   title: 'Font Aplikasi',
                   child: Column(
                     children: [
+                      Row(
+                        children: [
+                          IconButton.filledTonal(
+                            tooltip: 'Perkecil teks',
+                            onPressed: settings.textScale <= 0.8
+                                ? null
+                                : () => settings.setTextScale(
+                                    settings.textScale - 0.1,
+                                  ),
+                            icon: const Icon(Icons.remove),
+                          ),
+                          Expanded(
+                            child: Text(
+                              settings.textScale == 1
+                                  ? 'Default'
+                                  : '${(settings.textScale * 100).round()}%',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          IconButton.filledTonal(
+                            tooltip: 'Perbesar teks',
+                            onPressed: settings.textScale >= 1.4
+                                ? null
+                                : () => settings.setTextScale(
+                                    settings.textScale + 0.1,
+                                  ),
+                            icon: const Icon(Icons.add),
+                          ),
+                        ],
+                      ),
+                      TextButton(
+                        onPressed: settings.textScale == 1
+                            ? null
+                            : () => settings.setTextScale(1),
+                        child: const Text('Kembalikan ke Default'),
+                      ),
+                      const Divider(height: 24),
                       for (final font in AppFont.values)
                         _FontOption(
                           font: font,
