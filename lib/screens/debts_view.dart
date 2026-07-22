@@ -193,6 +193,11 @@ class _DebtTile extends StatelessWidget {
                   style: TextStyle(fontSize: 11, color: muted),
                 ),
               ],
+              if (debt.dueDate != null && !debt.settled)
+                Text(
+                  'Jatuh tempo ${tanggalPendek(debt.dueDate!)}',
+                  style: TextStyle(fontSize: 11, color: muted),
+                ),
               if (debt.note.isNotEmpty) ...[
                 const SizedBox(height: 3),
                 Text(
@@ -460,6 +465,7 @@ Future<void> _showDebtSheet(BuildContext context) {
   final amountController = TextEditingController();
   final noteController = TextEditingController();
   var isReceivable = false;
+  DateTime? dueDate;
 
   return showModalBottomSheet(
     context: context,
@@ -527,6 +533,24 @@ Future<void> _showDebtSheet(BuildContext context) {
                   border: OutlineInputBorder(),
                 ),
               ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final picked = await showDatePicker(
+                    context: sheetContext,
+                    initialDate: dueDate ?? DateTime.now(),
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime.now().add(const Duration(days: 3650)),
+                  );
+                  if (picked != null) setSheetState(() => dueDate = picked);
+                },
+                icon: const Icon(Icons.event_outlined),
+                label: Text(
+                  dueDate == null
+                      ? 'Tanggal jatuh tempo (opsional)'
+                      : 'Jatuh tempo ${tanggalPendek(dueDate!)}',
+                ),
+              ),
               const SizedBox(height: 20),
               FilledButton(
                 onPressed: () {
@@ -544,6 +568,7 @@ Future<void> _showDebtSheet(BuildContext context) {
                       isReceivable: isReceivable,
                       note: noteController.text.trim(),
                       date: DateTime.now(),
+                      dueDate: dueDate,
                     ),
                   );
                   Navigator.pop(sheetContext);

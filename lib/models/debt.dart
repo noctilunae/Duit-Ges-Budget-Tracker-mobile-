@@ -8,6 +8,7 @@ class Debt {
   final bool isReceivable;
   final String note;
   final DateTime date;
+  final DateTime? dueDate;
   final bool settled;
   final double paid;
 
@@ -18,6 +19,7 @@ class Debt {
     required this.isReceivable,
     this.note = '',
     required this.date,
+    this.dueDate,
     this.settled = false,
     this.paid = 0,
   });
@@ -32,6 +34,7 @@ class Debt {
     'is_receivable': isReceivable ? 1 : 0,
     'note': note,
     'date': date.toIso8601String(),
+    'due_date': dueDate?.toIso8601String(),
     'settled': settled ? 1 : 0,
     'paid': paid.round(),
   };
@@ -43,6 +46,7 @@ class Debt {
     isReceivable: (map['is_receivable'] as int) == 1,
     note: map['note'] as String? ?? '',
     date: DateTime.parse(map['date'] as String),
+    dueDate: DateTime.tryParse(map['due_date'] as String? ?? ''),
     settled: (map['settled'] as int? ?? 0) == 1,
     paid: (map['paid'] as num?)?.toDouble() ?? 0,
   );
