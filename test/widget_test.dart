@@ -128,6 +128,30 @@ void main() {
     expect(restored.privacyMode, isTrue);
   });
 
+  test('PIN dikunci sementara setelah 5 percobaan salah', () async {
+    SharedPreferences.setMockInitialValues({});
+    final settings = SettingsProvider();
+    await settings.load();
+    await settings.setPin('1234');
+    for (var i = 0; i < 5; i++) {
+      expect(await settings.verifyPin('0000'), isFalse);
+    }
+    expect(settings.pinCooldown, greaterThan(Duration.zero));
+    expect(await settings.verifyPin('1234'), isFalse);
+  });
+
+  test('ukuran teks default, dibatasi, dan tersimpan global', () async {
+    SharedPreferences.setMockInitialValues({});
+    final settings = SettingsProvider();
+    await settings.load();
+    expect(settings.textScale, 1);
+    await settings.setTextScale(2);
+    expect(settings.textScale, 1.4);
+    final restored = SettingsProvider();
+    await restored.load();
+    expect(restored.textScale, 1.4);
+  });
+
   test('tema bergambar memakai folder PNG dan warna khas', () {
     expect(SettingsProvider.presetColors, contains(const Color(0xFF8DB7D8)));
     expect(SettingsProvider.presetColors, hasLength(16));

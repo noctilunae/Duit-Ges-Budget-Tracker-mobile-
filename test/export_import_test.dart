@@ -13,6 +13,7 @@ import 'package:duit_ges/services/excel_exporter.dart';
 import 'package:duit_ges/services/excel_importer.dart';
 import 'package:flutter/material.dart' show Color;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:excel/excel.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -367,6 +368,78 @@ void main() {
 
     expect(await db.transactionCountForWallet(walletId), 1);
     expect(await db.transactionCountForCategory(category.id), 2);
+  });
+
+  test('recurring jatuh tempo membuat transaksi tepat sekali', () async {
+    final db = DatabaseHelper.instance;
+    final now = DateTime.now();
+    final recurringId = await db.insertRecurring(
+      Recurring(
+        amount: 43210,
+        categoryId: 'makanan',
+        walletId: 1,
+        note: 'uji recurring jatuh tempo',
+        type: TxType.expense,
+        day: now.day,
+        nextDue: DateTime(now.year, now.month, now.day),
+      ),
+    );
+
+    expect(await db.applyDueRecurrings(), 1);
+    expect(await db.applyDueRecurrings(), 0);
+    final created = (await db.all()).where(
+      (tx) => tx.note == 'uji recurring jatuh tempo',
+    );
+    expect(created, hasLength(1));
+    expect(created.single.amount, 43210);
+    await db.deleteRecurring(recurringId);
+  });
+
+  test('import Excel mencocokkan kategori dan fallback ke Lainnya', () async {
+    final excel = Excel.createExcel();
+    excel.rename('Sheet1', 'Transaksi');
+    final sheet = excel['Transaksi'];
+    sheet.appendRow([
+      TextCellValue('Tanggal'),
+      TextCellValue('Jam'),
+      TextCellValue('Tipe'),
+      TextCellValue('Kategori'),
+      TextCellValue('Dompet'),
+      TextCellValue('Jumlah'),
+      TextCellValue('Catatan'),
+    ]);
+    for (final (category, note) in [
+      ('Makanan', 'kategori cocok'),
+      ('Kategori Belum Ada', 'kategori fallback'),
+    ]) {
+      sheet.appendRow([
+        TextCellValue('22 Jul 2026'),
+        TextCellValue('12:00'),
+        TextCellValue('Pengeluaran'),
+        TextCellValue(category),
+        TextCellValue('Tunai'),
+        IntCellValue(10000),
+        TextCellValue(note),
+      ]);
+    }
+    final file = File('${Directory.systemTemp.path}/kategori_import_test.xlsx')
+      ..writeAsBytesSync(excel.encode()!);
+    addTearDown(() async {
+      if (await file.exists()) await file.delete();
+    });
+
+    expect(await ExcelImporter.import(file.path), (imported: 2, skipped: 0));
+    final imported = (await DatabaseHelper.instance.all())
+        .where((tx) => tx.note.startsWith('kategori '))
+        .toList();
+    expect(
+      imported.singleWhere((tx) => tx.note == 'kategori cocok').categoryId,
+      'makanan',
+    );
+    expect(
+      imported.singleWhere((tx) => tx.note == 'kategori fallback').categoryId,
+      'lainnya_keluar',
+    );
   });
 
   test('backup terverifikasi bisa mengembalikan database', () async {
