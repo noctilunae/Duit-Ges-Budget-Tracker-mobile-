@@ -4,7 +4,7 @@ Dokumen ini adalah sumber konteks kanonis untuk pengembang dan agent yang akan
 melanjutkan aplikasi. Perbarui dokumen ini ketika perilaku penting, skema data,
 tema, integrasi Android, atau alur build berubah.
 
-Terakhir diperbarui: **21 Juli 2026**. Audit penuh terakhir: 21 Juli 2026.
+Terakhir diperbarui: **22 Juli 2026**. Audit penuh terakhir: 21 Juli 2026.
 
 ## 1. Identitas dan prinsip produk
 
@@ -33,9 +33,13 @@ Terakhir diperbarui: **21 Juli 2026**. Audit penuh terakhir: 21 Juli 2026.
    - Tambah/edit/hapus transaksi dan lampiran foto struk.
    - Transfer antar dompet.
 2. **Budget**
-   - Subtab Budget kategori, Target tabungan, dan Utang/Piutang.
-   - Setiap budget dapat dibuka untuk melihat transaksi bulan aktif; transaksi
-     dapat dibuka, diedit, atau dihapus dari daftar tersebut.
+   - Subtab Pos Budget, Target tabungan, dan Utang/Piutang.
+   - Pos budget berdiri sendiri dari kategori transaksi dan dapat diatur nama,
+     ikon/emoji, warna, nominal, serta tipe kebutuhan/keinginan/tabungan.
+   - Transaksi dapat ditambahkan dari detail pos budget. Relasi `budget_id`
+     bersifat opsional dan tidak mengubah kategori transaksi aslinya.
+   - Rule pembagian gaji di Setelan memilih pos budget tujuan, tanggal bulanan,
+     serta persentase atau nominal. Setiap periode hanya diterapkan sekali.
    - Setoran target memotong saldo dompet dan membuat transaksi pengeluaran;
      menghapus transaksi tersebut mengurangi progres target kembali.
    - Utang/piutang mendukung pembayaran bertahap dari/ke dompet. Setiap
@@ -99,7 +103,7 @@ dan `DatabaseHelper + Provider` adalah jalur paling sederhana saat ini.
 
 Database: `duit_ges.db`, dikelola oleh `sqflite`.
 
-`DatabaseHelper.schemaVersion` saat ini **9**. Aturan mutlak ketika mengubah
+`DatabaseHelper.schemaVersion` saat ini **13**. Aturan mutlak ketika mengubah
 skema:
 
 1. Naikkan `schemaVersion`.
@@ -112,13 +116,14 @@ skema:
 
 | Tabel | Fungsi dan kolom penting |
 | --- | --- |
-| `transactions` | `amount INTEGER`, kategori, catatan, waktu ISO, tipe, dompet, path struk, `source_type/source_id` |
-| `budgets` | limit per `category_id` |
+| `transactions` | `amount INTEGER`, kategori, catatan, waktu ISO, tipe, dompet, path struk, `source_type/source_id`, `budget_id` opsional |
+| `budgets` | pos budget mandiri: nama, ikon, warna, tipe, dan nominal |
 | `wallets` | nama, icon, warna, `initial_balance INTEGER` |
-| `goals` | target tabungan, nilai terkumpul, warna |
-| `debts` | utang/piutang, orang, nominal, `paid`, catatan, tanggal, status lunas |
+| `goals` | target tabungan, nilai terkumpul, warna, ikon/emoji custom |
+| `debts` | utang/piutang, orang, nominal, `paid`, catatan, tanggal, jatuh tempo opsional, status lunas |
 | `custom_categories` | nama, icon, warna, tipe pemasukan/pengeluaran |
 | `recurrings` | template transaksi bulanan, hari, jatuh tempo berikut, status aktif |
+| `salary_allocations` | rule bulanan per pos budget dan penanda periode terakhir |
 
 Semua nominal database sejak v8 adalah integer rupiah. Model/UI masih memakai
 `double` untuk kompatibilitas API, tetapi nilai ditulis dengan `round()`.
@@ -153,6 +158,8 @@ Index transaksi yang tersedia:
   yang sama dan ada lock Future agar dua pemanggilan paralel tidak menduplikasi.
 - Bila aplikasi lama tidak dibuka, transaksi berulang melakukan catch-up untuk
   semua bulan yang terlewat.
+- Rule pembagian gaji memakai `last_period` dan transaksi SQLite agar setiap
+  periode hanya diterapkan sekali. Rule hanya menyentuh kategori yang diatur.
 - Penghapusan/update transaksi membersihkan file struk hanya jika file tersebut
   tidak lagi direferensikan transaksi lain.
 
@@ -232,6 +239,9 @@ utang, preferensi, atau struk.
 - Auto-backup berjalan paling cepat setiap 7 hari dan mempertahankan 4 backup.
 - Foto struk dapat diambil dari kamera/galeri. OCR lokal memakai Google ML Kit
   text recognition untuk menebak total; hasil tetap harus dikonfirmasi user.
+- Kategori custom dan dompet dapat memakai ikon Material berwarna atau emoji
+  full-color dari keyboard HP. Emoji disimpan di kolom `icon` dengan prefix
+  `emoji:` dan ikut disinkronkan ke pilihan pada widget Android.
 - `android:allowBackup="false"` mencegah backup Android otomatis.
 - Mode privasi memanggil channel native `duit_ges/privacy` untuk memasang
   `FLAG_SECURE`. Fitur ini memblokir screenshot/screen recording dan preview
@@ -267,8 +277,10 @@ utang, preferensi, atau struk.
   berubah.
 - Favorit kategori widget mengikuti urutan favorit form transaksi. Kategori
   bawaan maupun custom dapat dihapus bila tidak sedang dipakai transaksi,
-  transaksi berulang, atau budget; kategori bawaan disembunyikan lewat
+  atau transaksi berulang; kategori bawaan disembunyikan lewat
   preferensi agar riwayat lama tetap dapat menampilkan identitas kategorinya.
+- Widget ringkas 4×1 memiliki tombol centang yang membuka daftar lima transaksi
+  terakhir, mencakup pemasukan dan pengeluaran. Tombol tambah membuka aplikasi.
 - Quick save dinonaktifkan ketika PIN aktif agar widget tidak melewati lock
   screen. Foto struk, catatan bebas, pengaturan tanggal, transfer, dan utang/
   piutang tetap dikerjakan di aplikasi karena membutuhkan input yang tidak
