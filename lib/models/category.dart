@@ -8,6 +8,7 @@ class Category {
   final IconData icon;
   final Color color;
   final TxType type;
+  final String? emoji;
 
   const Category({
     required this.id,
@@ -15,7 +16,12 @@ class Category {
     required this.icon,
     required this.color,
     required this.type,
+    this.emoji,
   });
+
+  Widget iconWidget({Color? color, double? size}) => emoji == null
+      ? Icon(icon, color: color, size: size)
+      : Text(emoji!, style: TextStyle(fontSize: size));
 }
 
 const List<Category> expenseCategories = [
@@ -527,6 +533,7 @@ class CustomCategory {
     icon: categoryIconChoices[iconKey] ?? Icons.category,
     color: color,
     type: type,
+    emoji: iconKey.startsWith('emoji:') ? iconKey.substring(6) : null,
   );
 
   Map<String, dynamic> toMap() => {

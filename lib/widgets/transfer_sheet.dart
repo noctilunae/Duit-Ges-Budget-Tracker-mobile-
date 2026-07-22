@@ -206,7 +206,7 @@ class _WalletDropdown extends StatelessWidget {
             value: wallet.id,
             child: Row(
               children: [
-                Icon(wallet.icon, size: 16, color: wallet.color),
+                wallet.iconWidget(size: 16, color: wallet.color),
                 const SizedBox(width: 6),
                 Flexible(
                   child: Text(

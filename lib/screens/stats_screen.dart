@@ -508,7 +508,9 @@ class _CategoryRow extends StatelessWidget {
                 ),
               ],
             ),
-            child: Icon(category.icon, color: Colors.white, size: 20),
+            child: Center(
+              child: category.iconWidget(color: Colors.white, size: 20),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(

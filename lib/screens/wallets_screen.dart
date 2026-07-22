@@ -39,7 +39,9 @@ class WalletsScreen extends StatelessWidget {
                     shape: BoxShape.circle,
                     gradient: categoryGradient(wallet.color),
                   ),
-                  child: Icon(wallet.icon, color: Colors.white, size: 22),
+                  child: Center(
+                    child: wallet.iconWidget(color: Colors.white, size: 22),
+                  ),
                 ),
                 title: Text(
                   wallet.name,
@@ -94,6 +96,7 @@ class _WalletSheet extends StatefulWidget {
 class _WalletSheetState extends State<_WalletSheet> {
   late final TextEditingController _nameController;
   late final TextEditingController _balanceController;
+  late final TextEditingController _emojiController;
   late String _iconKey;
   late Color _color;
 
@@ -108,6 +111,7 @@ class _WalletSheetState extends State<_WalletSheet> {
           : groupRibuan(w.initialBalance.toInt().toString()),
     );
     _iconKey = w?.iconKey ?? 'cash';
+    _emojiController = TextEditingController(text: w?.emoji ?? '');
     _color = w?.color ?? walletColors.first;
   }
 
@@ -115,6 +119,7 @@ class _WalletSheetState extends State<_WalletSheet> {
   void dispose() {
     _nameController.dispose();
     _balanceController.dispose();
+    _emojiController.dispose();
     super.dispose();
   }
 
@@ -128,10 +133,17 @@ class _WalletSheetState extends State<_WalletSheet> {
     }
     final balance =
         double.tryParse(_balanceController.text.replaceAll('.', '')) ?? 0;
+    final emoji = _emojiController.text.trim();
+    if (_iconKey.startsWith('emoji:') && emoji.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Masukkan satu emoji')));
+      return;
+    }
     final wallet = Wallet(
       id: widget.existing?.id,
       name: name,
-      iconKey: _iconKey,
+      iconKey: _iconKey.startsWith('emoji:') ? 'emoji:$emoji' : _iconKey,
       color: _color,
       initialBalance: balance,
     );
@@ -179,142 +191,171 @@ class _WalletSheetState extends State<_WalletSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-            Text(
-              isEdit ? 'Edit Dompet' : 'Dompet Baru',
-              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _nameController,
-              autofocus: !isEdit,
-              textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(
-                labelText: 'Nama dompet',
-                hintText: 'misal: BCA, GoPay, Celengan',
-                border: OutlineInputBorder(),
+              Text(
+                isEdit ? 'Edit Dompet' : 'Dompet Baru',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Pilih ikon',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 8),
-            GridView.count(
-              crossAxisCount: 6,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-              children: [
-                for (final entry in walletIcons.entries)
-                  Tooltip(
-                    message: entry.key.replaceAll('_', ' '),
-                    child: InkWell(
-                      onTap: () => setState(() => _iconKey = entry.key),
-                      borderRadius: BorderRadius.circular(24),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: _iconKey == entry.key
-                              ? _color
-                              : _color.withValues(alpha: 0.12),
-                        ),
-                        child: Icon(
-                          entry.value,
-                          size: 20,
-                          color: _iconKey == entry.key ? Colors.white : _color,
+              const SizedBox(height: 16),
+              TextField(
+                controller: _nameController,
+                autofocus: !isEdit,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(
+                  labelText: 'Nama dompet',
+                  hintText: 'misal: BCA, GoPay, Celengan',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Pilih ikon',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              SegmentedButton<bool>(
+                segments: const [
+                  ButtonSegment(value: false, label: Text('Ikon warna')),
+                  ButtonSegment(value: true, label: Text('Emoji')),
+                ],
+                selected: {_iconKey.startsWith('emoji:')},
+                onSelectionChanged: (value) => setState(() {
+                  _iconKey = value.first ? 'emoji:' : 'cash';
+                }),
+              ),
+              const SizedBox(height: 8),
+              if (_iconKey.startsWith('emoji:'))
+                TextField(
+                  controller: _emojiController,
+                  autofocus: true,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 32),
+                  decoration: const InputDecoration(
+                    labelText: 'Emoji dompet',
+                    hintText: '🦆',
+                    helperText: 'Masukkan satu emoji dari keyboard HP',
+                  ),
+                )
+              else
+                GridView.count(
+                  crossAxisCount: 6,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
+                  children: [
+                    for (final entry in walletIcons.entries)
+                      Tooltip(
+                        message: entry.key.replaceAll('_', ' '),
+                        child: InkWell(
+                          onTap: () => setState(() => _iconKey = entry.key),
+                          borderRadius: BorderRadius.circular(24),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: _iconKey == entry.key
+                                  ? _color
+                                  : _color.withValues(alpha: 0.12),
+                            ),
+                            child: Icon(
+                              entry.value,
+                              size: 20,
+                              color: _iconKey == entry.key
+                                  ? Colors.white
+                                  : _color,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Pilih warna',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 8),
-            GridView.count(
-              crossAxisCount: 7,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-              children: [
-                for (final color in walletColors)
-                  Center(
-                    child: InkWell(
-                      onTap: () => setState(() => _color = color),
-                      borderRadius: BorderRadius.circular(18),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        width: 34,
-                        height: 34,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: color,
-                          border: Border.all(
-                            color: _color == color
-                                ? Theme.of(context).colorScheme.onSurface
-                                : Colors.transparent,
-                            width: 2,
+                  ],
+                ),
+              const SizedBox(height: 16),
+              const Text(
+                'Pilih warna',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              GridView.count(
+                crossAxisCount: 7,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+                children: [
+                  for (final color in walletColors)
+                    Center(
+                      child: InkWell(
+                        onTap: () => setState(() => _color = color),
+                        borderRadius: BorderRadius.circular(18),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          width: 34,
+                          height: 34,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: color,
+                            border: Border.all(
+                              color: _color == color
+                                  ? Theme.of(context).colorScheme.onSurface
+                                  : Colors.transparent,
+                              width: 2,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _balanceController,
-              keyboardType: TextInputType.number,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                RibuanInputFormatter(),
-              ],
-              decoration: const InputDecoration(
-                labelText: 'Saldo awal',
-                prefixText: 'Rp ',
-                helperText: 'Saldo dompet ini saat mulai dicatet di app',
-                border: OutlineInputBorder(),
+                ],
               ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                if (isEdit) ...[
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _delete,
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: expenseColor,
-                        side: BorderSide(
-                          color: expenseColor.withValues(alpha: 0.5),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _balanceController,
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  RibuanInputFormatter(),
+                ],
+                decoration: const InputDecoration(
+                  labelText: 'Saldo awal',
+                  prefixText: 'Rp ',
+                  helperText: 'Saldo dompet ini saat mulai dicatet di app',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  if (isEdit) ...[
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _delete,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: expenseColor,
+                          side: BorderSide(
+                            color: expenseColor.withValues(alpha: 0.5),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
+                        child: const Text('Hapus'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: _save,
+                      style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
-                      child: const Text('Hapus'),
+                      child: const Text('Simpan'),
                     ),
                   ),
-                  const SizedBox(width: 12),
                 ],
-                Expanded(
-                  child: FilledButton(
-                    onPressed: _save,
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    child: const Text('Simpan'),
-                  ),
-                ),
-              ],
-            ),
+              ),
             ],
           ),
         ),

@@ -90,7 +90,9 @@ class _RecurringTile extends StatelessWidget {
               shape: BoxShape.circle,
               gradient: categoryGradient(category.color),
             ),
-            child: Icon(category.icon, color: Colors.white, size: 22),
+            child: Center(
+              child: category.iconWidget(color: Colors.white, size: 22),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -299,7 +301,7 @@ class _RecurringFormState extends State<_RecurringForm> {
                     value: category.id,
                     child: Row(
                       children: [
-                        Icon(category.icon, size: 18, color: category.color),
+                        category.iconWidget(size: 18, color: category.color),
                         const SizedBox(width: 8),
                         Text(category.name),
                       ],

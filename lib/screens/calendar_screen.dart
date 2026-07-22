@@ -233,7 +233,9 @@ class _DaySheet extends StatelessWidget {
                       shape: BoxShape.circle,
                       gradient: categoryGradient(category.color),
                     ),
-                    child: Icon(category.icon, color: Colors.white, size: 20),
+                    child: Center(
+                      child: category.iconWidget(color: Colors.white, size: 20),
+                    ),
                   ),
                   title: Text(
                     category.name,

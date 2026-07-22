@@ -55,6 +55,12 @@ class Wallet {
   });
 
   IconData get icon => walletIcons[iconKey] ?? Icons.wallet;
+  String? get emoji =>
+      iconKey.startsWith('emoji:') ? iconKey.substring(6) : null;
+
+  Widget iconWidget({Color? color, double? size}) => emoji == null
+      ? Icon(icon, color: color, size: size)
+      : Text(emoji!, style: TextStyle(fontSize: size));
 
   Map<String, dynamic> toMap() {
     return {

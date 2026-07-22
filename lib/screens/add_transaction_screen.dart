@@ -650,9 +650,11 @@ class _CategoryItem extends StatelessWidget {
                           ]
                         : null,
                   ),
-                  child: Icon(
-                    category.icon,
-                    color: selected ? Colors.white : category.color,
+                  child: Center(
+                    child: category.iconWidget(
+                      color: selected ? Colors.white : category.color,
+                      size: 24,
+                    ),
                   ),
                 ),
                 if (highlighted)
@@ -763,8 +765,7 @@ class _WalletChip extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(
-              wallet.icon,
+            wallet.iconWidget(
               size: 16,
               color: selected ? Colors.white : wallet.color,
             ),
@@ -882,8 +883,7 @@ class _CategoryManagerSheetState extends State<_CategoryManagerSheet> {
                       FilterChip(
                         selected: provider.isHighlighted(category.id),
                         showCheckmark: false,
-                        avatar: Icon(
-                          category.icon,
+                        avatar: category.iconWidget(
                           size: 16,
                           color: category.color,
                         ),
@@ -920,7 +920,10 @@ class _CategoryManagerSheetState extends State<_CategoryManagerSheet> {
                         : null,
                     leading: CircleAvatar(
                       backgroundColor: category.color.withValues(alpha: 0.15),
-                      child: Icon(category.icon, color: category.color),
+                      child: category.iconWidget(
+                        color: category.color,
+                        size: 24,
+                      ),
                     ),
                     title: Text(category.name),
                     subtitle: Text(
@@ -981,6 +984,11 @@ class _AddCategoriesSheetState extends State<_AddCategoriesSheet> {
   late final _namesController = TextEditingController(
     text: widget.existing?.name ?? '',
   );
+  late final _emojiController = TextEditingController(
+    text: widget.existing?.iconKey.startsWith('emoji:') == true
+        ? widget.existing!.iconKey.substring(6)
+        : '',
+  );
   late TxType _type = widget.initialType;
   late String _iconKey = widget.existing?.iconKey ?? 'star';
   late Color _color = widget.existing?.color ?? categoryColorChoices.first;
@@ -991,6 +999,7 @@ class _AddCategoriesSheetState extends State<_AddCategoriesSheet> {
   @override
   void dispose() {
     _namesController.dispose();
+    _emojiController.dispose();
     super.dispose();
   }
 
@@ -1002,6 +1011,14 @@ class _AddCategoriesSheetState extends State<_AddCategoriesSheet> {
       );
       return;
     }
+    final emoji = _emojiController.text.trim();
+    if (_iconKey.startsWith('emoji:') && emoji.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Masukkan satu emoji')));
+      return;
+    }
+    final savedIcon = _iconKey.startsWith('emoji:') ? 'emoji:$emoji' : _iconKey;
     setState(() => _saving = true);
     if (_isEdit) {
       // Id & tipe dipertahankan biar transaksi lama tetep nyambung.
@@ -1009,7 +1026,7 @@ class _AddCategoriesSheetState extends State<_AddCategoriesSheet> {
         CustomCategory(
           id: widget.existing!.id,
           name: names.first,
-          iconKey: _iconKey,
+          iconKey: savedIcon,
           color: _color,
           type: widget.existing!.type,
         ),
@@ -1021,7 +1038,7 @@ class _AddCategoriesSheetState extends State<_AddCategoriesSheet> {
           CustomCategory(
             id: 'custom_${_type.name}_${stamp}_$i',
             name: names[i],
-            iconKey: _iconKey,
+            iconKey: savedIcon,
             color: _color,
             type: _type,
           ),
@@ -1082,35 +1099,58 @@ class _AddCategoriesSheetState extends State<_AddCategoriesSheet> {
               style: TextStyle(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
-            GridView.count(
-              crossAxisCount: 7,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 6,
-              crossAxisSpacing: 6,
-              children: [
-                for (final entry in categoryIconChoices.entries)
-                  InkWell(
-                    onTap: () => setState(() => _iconKey = entry.key),
-                    borderRadius: BorderRadius.circular(12),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      decoration: BoxDecoration(
-                        color: _iconKey == entry.key
-                            ? _color.withValues(alpha: 0.2)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: _iconKey == entry.key
-                              ? _color
-                              : Theme.of(context).colorScheme.outlineVariant,
-                        ),
-                      ),
-                      child: Icon(entry.value, color: _color),
-                    ),
-                  ),
+            SegmentedButton<bool>(
+              segments: const [
+                ButtonSegment(value: false, label: Text('Ikon warna')),
+                ButtonSegment(value: true, label: Text('Emoji')),
               ],
+              selected: {_iconKey.startsWith('emoji:')},
+              onSelectionChanged: (value) => setState(() {
+                _iconKey = value.first ? 'emoji:' : 'star';
+              }),
             ),
+            const SizedBox(height: 8),
+            if (_iconKey.startsWith('emoji:'))
+              TextField(
+                controller: _emojiController,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 32),
+                decoration: const InputDecoration(
+                  labelText: 'Emoji kategori',
+                  hintText: '🦆',
+                  helperText: 'Masukkan satu emoji dari keyboard HP',
+                ),
+              )
+            else
+              GridView.count(
+                crossAxisCount: 7,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: 6,
+                crossAxisSpacing: 6,
+                children: [
+                  for (final entry in categoryIconChoices.entries)
+                    InkWell(
+                      onTap: () => setState(() => _iconKey = entry.key),
+                      borderRadius: BorderRadius.circular(12),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        decoration: BoxDecoration(
+                          color: _iconKey == entry.key
+                              ? _color.withValues(alpha: 0.2)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: _iconKey == entry.key
+                                ? _color
+                                : Theme.of(context).colorScheme.outlineVariant,
+                          ),
+                        ),
+                        child: Icon(entry.value, color: _color),
+                      ),
+                    ),
+                ],
+              ),
             const SizedBox(height: 20),
             const Text('Warna', style: TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),

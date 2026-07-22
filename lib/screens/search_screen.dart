@@ -94,7 +94,7 @@ class _SearchScreenState extends State<SearchScreen> {
         children: [
           for (final category in all)
             ListTile(
-              leading: Icon(category.icon, color: category.color),
+              leading: category.iconWidget(color: category.color, size: 24),
               title: Text(category.name),
               trailing: Text(
                 category.type == TxType.income ? 'Masuk' : 'Keluar',
@@ -238,7 +238,9 @@ class _SearchScreenState extends State<SearchScreen> {
                       shape: BoxShape.circle,
                       gradient: categoryGradient(category.color),
                     ),
-                    child: Icon(category.icon, color: Colors.white, size: 20),
+                    child: Center(
+                      child: category.iconWidget(color: Colors.white, size: 20),
+                    ),
                   ),
                   title: Text(
                     category.name,

@@ -666,8 +666,7 @@ class _ReportRowState extends State<_ReportRow> {
                                 radius: 15,
                                 backgroundColor: transaction.category.color
                                     .withValues(alpha: 0.15),
-                                child: Icon(
-                                  transaction.category.icon,
+                                child: transaction.category.iconWidget(
                                   size: 16,
                                   color: transaction.category.color,
                                 ),
@@ -787,7 +786,10 @@ class _CategoryFilterState extends State<_CategoryFilter> {
                 final category = widget.categories[index];
                 return CheckboxListTile(
                   value: _selected.contains(category.id),
-                  secondary: Icon(category.icon, color: category.color),
+                  secondary: category.iconWidget(
+                    color: category.color,
+                    size: 24,
+                  ),
                   title: Text(category.name),
                   onChanged: (selected) => setState(() {
                     if (selected ?? false) {

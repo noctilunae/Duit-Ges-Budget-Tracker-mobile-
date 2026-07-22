@@ -665,7 +665,11 @@ class _WalletStrip extends StatelessWidget {
                       _WalletCard(
                         label: 'Semua',
                         amount: walletProvider.totalBalance,
-                        icon: Icons.wallet,
+                        icon: const Icon(
+                          Icons.wallet,
+                          color: Colors.white,
+                          size: 17,
+                        ),
                         color: accent,
                         selected: filter == null,
                         onTap: () => txProvider.setWalletFilter(null),
@@ -674,7 +678,10 @@ class _WalletStrip extends StatelessWidget {
                         _WalletCard(
                           label: wallet.name,
                           amount: walletProvider.balanceOf(wallet),
-                          icon: wallet.icon,
+                          icon: wallet.iconWidget(
+                            color: Colors.white,
+                            size: 17,
+                          ),
                           color: wallet.color,
                           selected: filter == wallet.id,
                           onTap: () => txProvider.setWalletFilter(
@@ -693,7 +700,7 @@ class _WalletStrip extends StatelessWidget {
 class _WalletCard extends StatelessWidget {
   final String label;
   final double amount;
-  final IconData icon;
+  final Widget icon;
   final Color color;
   final bool selected;
   final VoidCallback onTap;
@@ -735,7 +742,7 @@ class _WalletCard extends StatelessWidget {
                 shape: BoxShape.circle,
                 gradient: categoryGradient(color),
               ),
-              child: Icon(icon, color: Colors.white, size: 17),
+              child: Center(child: icon),
             ),
             const SizedBox(width: 8),
             Column(
@@ -900,7 +907,9 @@ class _TransactionTile extends StatelessWidget {
                 ),
               ],
             ),
-            child: Icon(category.icon, color: Colors.white, size: 22),
+            child: Center(
+              child: category.iconWidget(color: Colors.white, size: 22),
+            ),
           ),
           title: Text(
             category.name,

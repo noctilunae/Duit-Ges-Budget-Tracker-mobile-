@@ -131,7 +131,9 @@ class TransactionDetailSheet extends StatelessWidget {
                 ),
               ],
             ),
-            child: Icon(category.icon, color: Colors.white, size: 34),
+            child: Center(
+              child: category.iconWidget(color: Colors.white, size: 34),
+            ),
           ),
           const SizedBox(height: 12),
           Text(
