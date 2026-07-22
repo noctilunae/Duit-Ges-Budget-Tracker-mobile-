@@ -9,6 +9,7 @@ class ReminderService {
   ReminderService._();
 
   static const _id = 1001;
+  static const _backupId = 1002;
   static final _plugin = FlutterLocalNotificationsPlugin();
   static bool _initialized = false;
 
@@ -79,5 +80,35 @@ class ReminderService {
   static Future<void> cancel() async {
     await _ensureInit();
     await _plugin.cancel(id: _id);
+  }
+
+  static Future<void> scheduleWeeklyBackup() async {
+    await _ensureInit();
+    final now = tz.TZDateTime.now(tz.local);
+    var first = tz.TZDateTime(tz.local, now.year, now.month, now.day, 19);
+    while (first.weekday != DateTime.sunday || !first.isAfter(now)) {
+      first = first.add(const Duration(days: 1));
+    }
+    await _plugin.zonedSchedule(
+      id: _backupId,
+      title: 'Amankan backup Duit Ges',
+      body: 'Bagikan file backup ke Drive atau penyimpanan di luar aplikasi.',
+      scheduledDate: first,
+      notificationDetails: const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'reminder_backup',
+          'Reminder Backup',
+          channelDescription: 'Pengingat menyimpan backup di luar aplikasi',
+          playSound: false,
+        ),
+      ),
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+    );
+  }
+
+  static Future<void> cancelWeeklyBackup() async {
+    await _ensureInit();
+    await _plugin.cancel(id: _backupId);
   }
 }

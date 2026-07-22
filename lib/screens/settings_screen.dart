@@ -14,15 +14,17 @@ import '../providers/recurring_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/transaction_provider.dart';
 import '../providers/wallet_provider.dart';
+import '../services/auto_backup_service.dart';
 import '../services/excel_exporter.dart';
 import '../services/excel_importer.dart';
 import '../services/reminder_service.dart';
 import '../utils/app_style.dart';
+import '../utils/formatters.dart';
+import '../widgets/page_header.dart';
+import '../widgets/theme_artwork.dart';
 import '../widgets/looping_asset_video.dart';
 import 'receipts_screen.dart';
 import 'recurrings_screen.dart';
-import '../widgets/page_header.dart';
-import '../widgets/theme_artwork.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -299,6 +301,55 @@ class SettingsScreen extends StatelessWidget {
                         ),
                         value: settings.autoBackupEnabled,
                         onChanged: settings.setAutoBackup,
+                      ),
+                      FutureBuilder<List<String?>>(
+                        future: Future.wait([
+                          AutoBackupService.lastBackupLabel(),
+                          AutoBackupService.lastBackupError(),
+                        ]),
+                        builder: (context, snapshot) {
+                          final success = DateTime.tryParse(
+                            snapshot.data?[0] ?? '',
+                          );
+                          final failed = DateTime.tryParse(
+                            snapshot.data?[1] ?? '',
+                          );
+                          final text =
+                              failed != null &&
+                                  (success == null || failed.isAfter(success))
+                              ? 'Backup terakhir gagal ${tanggalLengkap(failed)}'
+                              : success == null
+                              ? 'Belum pernah backup otomatis'
+                              : 'Backup terakhir berhasil ${tanggalLengkap(success)}';
+                          return Padding(
+                            padding: const EdgeInsets.only(left: 16, bottom: 4),
+                            child: Text(
+                              text,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          );
+                        },
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        secondary: const Icon(Icons.cloud_upload_outlined),
+                        title: const Text('Ingatkan Backup ke Luar App'),
+                        subtitle: const Text(
+                          'Notifikasi tiap Minggu jam 19.00',
+                        ),
+                        value: settings.externalBackupReminderEnabled,
+                        onChanged: (enabled) async {
+                          if (enabled &&
+                              !await ReminderService.requestPermission()) {
+                            return;
+                          }
+                          await settings.setExternalBackupReminder(enabled);
+                          if (enabled) {
+                            await ReminderService.scheduleWeeklyBackup();
+                          } else {
+                            await ReminderService.cancelWeeklyBackup();
+                          }
+                        },
                       ),
                     ],
                   ),

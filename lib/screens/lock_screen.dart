@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -16,19 +18,27 @@ class _LockScreenState extends State<LockScreen> {
   String _input = '';
   bool _wrong = false;
 
-  void _press(String digit) {
+  Future<void> _press(String digit) async {
+    final settings = context.read<SettingsProvider>();
+    if (settings.pinCooldown > Duration.zero) return;
     if (_input.length >= 4) return;
     setState(() {
       _input += digit;
       _wrong = false;
     });
     if (_input.length == 4) {
-      final ok = context.read<SettingsProvider>().verifyPin(_input);
+      final ok = await settings.verifyPin(_input);
+      if (!mounted) return;
       if (!ok) {
         setState(() {
           _input = '';
           _wrong = true;
         });
+        if (settings.pinCooldown > Duration.zero) {
+          Timer(settings.pinCooldown, () {
+            if (mounted) setState(() {});
+          });
+        }
       }
     }
   }
@@ -73,7 +83,11 @@ class _LockScreenState extends State<LockScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                _wrong ? 'PIN salah, coba lagi' : 'Masukin PIN kamu',
+                settings.pinCooldown > Duration.zero
+                    ? 'Terlalu banyak percobaan. Tunggu 30 detik'
+                    : _wrong
+                    ? 'PIN salah, coba lagi'
+                    : 'Masukin PIN kamu',
                 style: TextStyle(
                   color: _wrong ? const Color(0xFFFFCDD2) : Colors.white70,
                   fontSize: 14,

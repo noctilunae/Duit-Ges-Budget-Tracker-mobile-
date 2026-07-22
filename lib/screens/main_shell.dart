@@ -39,6 +39,9 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
       if (settings.reminderEnabled) {
         ReminderService.scheduleDaily(settings.reminderTime);
       }
+      if (settings.externalBackupReminderEnabled) {
+        ReminderService.scheduleWeeklyBackup();
+      }
     });
   }
 

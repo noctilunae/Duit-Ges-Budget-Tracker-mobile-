@@ -21,8 +21,8 @@ class AutoBackupService {
   /// Jalanin backup kalau udah waktunya (dipanggil tiap app dibuka).
   /// Aman dipanggil kapan aja: kalau belum jatuh tempo, langsung balik.
   static Future<void> runIfDue() async {
+    final prefs = await SharedPreferences.getInstance();
     try {
-      final prefs = await SharedPreferences.getInstance();
       if (!(prefs.getBool('autoBackupEnabled') ?? false)) return;
       final lastRun = DateTime.tryParse(
         prefs.getString('lastAutoBackup') ?? '',
@@ -39,7 +39,12 @@ class AutoBackupService {
       );
       await _prune(dir);
       await prefs.setString('lastAutoBackup', now.toIso8601String());
-    } catch (_) {
+      await prefs.remove('lastAutoBackupError');
+    } catch (error) {
+      await prefs.setString(
+        'lastAutoBackupError',
+        DateTime.now().toIso8601String(),
+      );
       // Backup otomatis gagal (storage penuh dll) jangan sampai
       // ganggu app — dicoba lagi di pembukaan berikutnya.
     }
@@ -72,5 +77,10 @@ class AutoBackupService {
   static Future<String?> lastBackupLabel() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('lastAutoBackup');
+  }
+
+  static Future<String?> lastBackupError() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('lastAutoBackupError');
   }
 }

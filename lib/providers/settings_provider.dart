@@ -553,6 +553,9 @@ class SettingsProvider extends ChangeNotifier {
   bool _reminderEnabled = false;
   TimeOfDay _reminderTime = const TimeOfDay(hour: 20, minute: 0);
   bool _autoBackupEnabled = false;
+  bool _externalBackupReminderEnabled = false;
+  int _failedPinAttempts = 0;
+  DateTime? _pinLockedUntil;
 
   bool get hideBalance => _hideBalance;
   bool get hideWallets => _hideWallets;
@@ -560,6 +563,13 @@ class SettingsProvider extends ChangeNotifier {
   bool get reminderEnabled => _reminderEnabled;
   TimeOfDay get reminderTime => _reminderTime;
   bool get autoBackupEnabled => _autoBackupEnabled;
+  bool get externalBackupReminderEnabled => _externalBackupReminderEnabled;
+  Duration get pinCooldown {
+    final remaining = _pinLockedUntil?.difference(DateTime.now());
+    return remaining != null && !remaining.isNegative
+        ? remaining
+        : Duration.zero;
+  }
 
   Color get accent => preset.tabAccents?[_activeTab] ?? _accent;
   bool get darkMode => _darkMode;
@@ -666,6 +676,12 @@ class SettingsProvider extends ChangeNotifier {
       minute: prefs.getInt('reminderMinute') ?? 0,
     );
     _autoBackupEnabled = prefs.getBool('autoBackupEnabled') ?? false;
+    _externalBackupReminderEnabled =
+        prefs.getBool('externalBackupReminderEnabled') ?? false;
+    _failedPinAttempts = prefs.getInt('failedPinAttempts') ?? 0;
+    _pinLockedUntil = DateTime.tryParse(
+      prefs.getString('pinLockedUntil') ?? '',
+    );
     _ready = true;
     notifyListeners();
     _syncWidget();
@@ -688,6 +704,13 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('autoBackupEnabled', enabled);
+  }
+
+  Future<void> setExternalBackupReminder(bool enabled) async {
+    _externalBackupReminderEnabled = enabled;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('externalBackupReminderEnabled', enabled);
   }
 
   /// Sembunyiin nominal saldo di layar (jadi "Rp ••••••").
@@ -720,8 +743,27 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   /// Cek PIN; kalau bener, app kebuka.
-  bool verifyPin(String pin) {
-    if (_hashPin(pin) != _pinHash) return false;
+  Future<bool> verifyPin(String pin) async {
+    if (pinCooldown > Duration.zero) return false;
+    final prefs = await SharedPreferences.getInstance();
+    if (_hashPin(pin) != _pinHash) {
+      _failedPinAttempts++;
+      if (_failedPinAttempts >= 5) {
+        _pinLockedUntil = DateTime.now().add(const Duration(seconds: 30));
+        _failedPinAttempts = 0;
+        await prefs.setString(
+          'pinLockedUntil',
+          _pinLockedUntil!.toIso8601String(),
+        );
+      }
+      await prefs.setInt('failedPinAttempts', _failedPinAttempts);
+      notifyListeners();
+      return false;
+    }
+    _failedPinAttempts = 0;
+    _pinLockedUntil = null;
+    await prefs.remove('failedPinAttempts');
+    await prefs.remove('pinLockedUntil');
     _unlocked = true;
     notifyListeners();
     return true;
