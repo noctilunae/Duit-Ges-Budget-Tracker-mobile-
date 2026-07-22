@@ -265,6 +265,12 @@ open class SaldoWidgetProvider : HomeWidgetProvider() {
             ),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
+        val history = PendingIntent.getActivity(
+            context,
+            widgetId,
+            Intent(context, WidgetHistoryActivity::class.java),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
         val views = RemoteViews(context.packageName, layoutRes).apply {
             setImageViewBitmap(
                 R.id.widget_background,
@@ -279,12 +285,18 @@ open class SaldoWidgetProvider : HomeWidgetProvider() {
                 setTextColor(R.id.widget_masuk, INCOME_COLOR)
                 setTextColor(R.id.widget_keluar, EXPENSE_COLOR)
                 setInt(R.id.widget_add, "setColorFilter", accent)
+                setTextColor(R.id.widget_history, accent)
                 setOnClickPendingIntent(R.id.widget_root, launch)
+                setOnClickPendingIntent(R.id.widget_history, history)
                 setOnClickPendingIntent(R.id.widget_add, launch)
                 return@apply
             }
 
-            setImageViewBitmap(R.id.widget_save_background, roundedBitmap(accent))
+            val saveSize = if (layoutRes == R.layout.saldo_widget) 160 to 320 else 640 to 96
+            setImageViewBitmap(
+                R.id.widget_save_background,
+                roundedBitmap(accent, saveSize.first, saveSize.second),
+            )
             setTextViewText(R.id.widget_bulan, prefs.getString("widget_bulan", "Duit Ges"))
             setTextViewText(R.id.widget_saldo, prefs.getString("widget_saldo", "Rp 0"))
             if (amountPopup) setOnClickPendingIntent(R.id.widget_nominal, amountInput)
@@ -432,6 +444,7 @@ open class SaldoWidgetProvider : HomeWidgetProvider() {
                     item.getString("name"),
                     item.optInt("icon", ICON_CATEGORY),
                     item.optLong("color", 0xFF78909C).toInt(),
+                    item.optString("emoji").takeIf { it.isNotBlank() },
                 )
             }
         } catch (_: Exception) {
@@ -479,19 +492,20 @@ open class SaldoWidgetProvider : HomeWidgetProvider() {
         }
     }
 
-    private fun roundedBitmap(color: Int): Bitmap {
-        if (color == cachedSaveColor) cachedSave?.let { return it }
-        return Bitmap.createBitmap(640, 96, Bitmap.Config.ARGB_8888).also { bitmap ->
+    private fun roundedBitmap(color: Int, width: Int, height: Int): Bitmap {
+        val key = "$color:$width:$height"
+        if (key == cachedSaveKey) cachedSave?.let { return it }
+        return Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).also { bitmap ->
             Canvas(bitmap).drawRoundRect(
                 0f,
                 0f,
-                640f,
-                96f,
-                20f,
-                20f,
+                width.toFloat(),
+                height.toFloat(),
+                20f.coerceAtMost(width / 4f),
+                20f.coerceAtMost(width / 4f),
                 Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color },
             )
-            cachedSaveColor = color
+            cachedSaveKey = key
             cachedSave = bitmap
         }
     }
@@ -502,7 +516,7 @@ open class SaldoWidgetProvider : HomeWidgetProvider() {
         selected: Boolean,
         accent: Int,
     ): Bitmap {
-        val key = "${item.icon}:${item.color}:$selected:$accent"
+        val key = "${item.icon}:${item.emoji}:${item.color}:$selected:$accent"
         iconCache[key]?.let { return it }
         val size = 96
         val center = size / 2f
@@ -533,10 +547,10 @@ open class SaldoWidgetProvider : HomeWidgetProvider() {
         val iconPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.WHITE
             textAlign = Paint.Align.CENTER
-            textSize = 43f
-            typeface = materialIcons(context)
+            textSize = if (item.emoji == null) 43f else 48f
+            typeface = if (item.emoji == null) materialIcons(context) else Typeface.DEFAULT
         }
-        val glyph = String(Character.toChars(item.icon))
+        val glyph = item.emoji ?: String(Character.toChars(item.icon))
         val baseline = center - (iconPaint.ascent() + iconPaint.descent()) / 2
         canvas.drawText(glyph, center, baseline, iconPaint)
         iconCache[key] = bitmap
@@ -578,6 +592,7 @@ open class SaldoWidgetProvider : HomeWidgetProvider() {
         val name: String,
         val icon: Int = ICON_CATEGORY,
         val color: Int = 0xFF78909C.toInt(),
+        val emoji: String? = null,
     )
 
     companion object {
@@ -655,7 +670,7 @@ open class SaldoWidgetProvider : HomeWidgetProvider() {
         )
         private var cachedBackgroundKey = ""
         private var cachedBackground: Bitmap? = null
-        private var cachedSaveColor = 0
+        private var cachedSaveKey = ""
         private var cachedSave: Bitmap? = null
         private var materialTypeface: Typeface? = null
         private val iconCache = object : LinkedHashMap<String, Bitmap>(96, 0.75f, true) {

@@ -107,11 +107,23 @@
             </LinearLayout>
         </LinearLayout>
 
+        <TextView
+            android:id="@+id/widget_history"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/widget_panel_bg"
+            android:contentDescription="Lihat transaksi terakhir"
+            android:gravity="center"
+            android:text="✓"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
         <ImageView
             android:id="@+id/widget_add"
             android:layout_width="32dp"
             android:layout_height="32dp"
-            android:layout_marginStart="8dp"
+            android:layout_marginStart="6dp"
             android:contentDescription="Tambah transaksi"
             android:src="@drawable/widget_add" />
     </LinearLayout>

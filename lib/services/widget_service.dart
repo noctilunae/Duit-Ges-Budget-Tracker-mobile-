@@ -120,6 +120,7 @@ class WidgetService {
             'id': category.id,
             'name': category.name,
             'icon': category.icon.codePoint,
+            if (category.emoji != null) 'emoji': category.emoji!,
             'color': category.color.toARGB32(),
           },
       ];
@@ -142,6 +143,7 @@ class WidgetService {
             'id': wallet.id,
             'name': wallet.name,
             'icon': wallet.icon.codePoint,
+            if (wallet.emoji != null) 'emoji': wallet.emoji!,
             'color': wallet.color.toARGB32(),
           },
       ]),
