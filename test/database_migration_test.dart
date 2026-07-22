@@ -111,9 +111,27 @@ void main() {
     );
     expect(
       transactionColumns.map((column) => column['name']),
-      containsAll(['source_type', 'source_id']),
+      containsAll(['source_type', 'source_id', 'budget_id']),
     );
     final debt = (await db.rawQuery('SELECT paid FROM debts LIMIT 1')).single;
     expect(debt['paid'], 0);
+    expect(
+      (await db.rawQuery(
+        'PRAGMA table_info(budgets)',
+      )).map((column) => column['name']),
+      containsAll(['id', 'name', 'icon', 'color', 'budget_type']),
+    );
+    expect(
+      (await db.rawQuery(
+        'PRAGMA table_info(debts)',
+      )).map((column) => column['name']),
+      contains('due_date'),
+    );
+    expect(
+      (await db.rawQuery(
+        'PRAGMA table_info(goals)',
+      )).map((column) => column['name']),
+      contains('icon'),
+    );
   });
 }

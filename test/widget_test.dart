@@ -6,8 +6,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:duit_ges/models/category.dart';
+import 'package:duit_ges/models/goal.dart';
 import 'package:duit_ges/models/recurring.dart';
 import 'package:duit_ges/models/transaction.dart';
+import 'package:duit_ges/models/wallet.dart';
 import 'package:duit_ges/providers/settings_provider.dart';
 import 'package:duit_ges/utils/formatters.dart';
 import 'package:duit_ges/widgets/theme_artwork.dart';
@@ -38,6 +40,26 @@ void main() {
     expect(restored.type, tx.type);
   });
 
+  test('kategori dan dompet custom menyimpan emoji tanpa migrasi', () {
+    const category = CustomCategory(
+      id: 'bebek',
+      name: 'Bebek',
+      iconKey: 'emoji:🦆',
+      color: Colors.amber,
+      type: TxType.expense,
+    );
+    const wallet = Wallet(name: 'Celengan', iconKey: 'emoji:🐣');
+
+    expect(category.toCategory().emoji, '🦆');
+    expect(CustomCategory.fromMap(category.toMap()).iconKey, 'emoji:🦆');
+    expect(Wallet.fromMap(wallet.toMap()).emoji, '🐣');
+  });
+
+  test('target custom menyimpan ikon emoji', () {
+    const goal = Goal(name: 'Liburan', target: 5000000, iconKey: 'emoji:🏝️');
+    expect(Goal.fromMap(goal.toMap()).emoji, '🏝️');
+  });
+
   test('widget Android punya keypad dan simpan langsung tanpa redirect', () {
     final layout = File(
       'android/app/src/main/res/layout/saldo_widget.xml',
@@ -45,6 +67,12 @@ void main() {
     final provider = File(
       'android/app/src/main/kotlin/com/noctilune/duitnia/'
       'SaldoWidgetProvider.kt',
+    ).readAsStringSync();
+    final compact = File(
+      'android/app/src/main/res/layout/saldo_widget_compact.xml',
+    ).readAsStringSync();
+    final medium = File(
+      'android/app/src/main/res/layout/saldo_widget_medium.xml',
     ).readAsStringSync();
 
     for (final id in [
@@ -60,8 +88,18 @@ void main() {
       expect(layout, contains(id));
     }
     expect(provider, contains('insertOrThrow("transactions"'));
+    expect(provider, contains('160 to 320'));
+    expect(compact, contains('widget_history'));
+    expect(
+      File(
+        'android/app/src/main/kotlin/com/noctilune/duitnia/'
+        'WidgetHistoryActivity.kt',
+      ).readAsStringSync(),
+      allOf(contains('Transaksi Terakhir'), contains('LIMIT 5')),
+    );
     expect(provider, contains('MaterialIcons-Regular.otf'));
     expect(provider, isNot(contains('duitges://add')));
+    expect(medium, contains('android:paddingHorizontal="10dp"'));
   });
 
   test('setoran target bisa digeser untuk dihapus dari halaman transaksi', () {

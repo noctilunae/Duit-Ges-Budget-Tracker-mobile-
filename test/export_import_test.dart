@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:duit_ges/db/database_helper.dart';
 import 'package:duit_ges/models/category.dart';
+import 'package:duit_ges/models/budget.dart';
 import 'package:duit_ges/models/debt.dart';
 import 'package:duit_ges/models/goal.dart';
 import 'package:duit_ges/models/recurring.dart';
@@ -364,10 +365,8 @@ void main() {
         nextDue: DateTime(2027, 1, 10),
       ),
     );
-    await db.setBudget(category.id, 50000);
-
     expect(await db.transactionCountForWallet(walletId), 1);
-    expect(await db.transactionCountForCategory(category.id), 2);
+    expect(await db.transactionCountForCategory(category.id), 1);
   });
 
   test('recurring jatuh tempo membuat transaksi tepat sekali', () async {
@@ -393,6 +392,150 @@ void main() {
     expect(created, hasLength(1));
     expect(created.single.amount, 43210);
     await db.deleteRecurring(recurringId);
+  });
+
+  test('rule gaji membuat budget kategori hanya sekali per bulan', () async {
+    final db = DatabaseHelper.instance;
+    await db.saveBudget(
+      const Budget(
+        id: 'budget_makan',
+        name: 'Makan',
+        iconKey: 'restaurant',
+        color: Color(0xFFFF7043),
+        type: BudgetType.kebutuhan,
+        amount: 1,
+      ),
+    );
+    await db.saveBudget(
+      const Budget(
+        id: 'budget_hiburan',
+        name: 'Hiburan',
+        iconKey: 'movie',
+        color: Color(0xFFAB47BC),
+        type: BudgetType.keinginan,
+        amount: 1,
+      ),
+    );
+    await db.saveSalaryAllocations([
+      {
+        'budget_id': 'budget_makan',
+        'amount': null,
+        'percentage': 20.0,
+        'salary': 5000000,
+        'day': 10,
+      },
+      {
+        'budget_id': 'budget_hiburan',
+        'amount': 250000,
+        'percentage': null,
+        'salary': 5000000,
+        'day': 10,
+      },
+    ]);
+
+    expect(await db.applySalaryAllocations(DateTime(2026, 8, 10)), isTrue);
+    expect(
+      (await db.budgets())
+          .firstWhere((item) => item.id == 'budget_makan')
+          .amount,
+      1000000,
+    );
+    await db.saveBudget(
+      const Budget(
+        id: 'budget_makan',
+        name: 'Makan',
+        iconKey: 'restaurant',
+        color: Color(0xFFFF7043),
+        type: BudgetType.kebutuhan,
+        amount: 123,
+      ),
+    );
+    expect(await db.applySalaryAllocations(DateTime(2026, 8, 20)), isFalse);
+    expect(
+      (await db.budgets())
+          .firstWhere((item) => item.id == 'budget_makan')
+          .amount,
+      123,
+    );
+    expect(
+      await db.applySalaryAllocations(DateTime(2026, 8, 20), true),
+      isTrue,
+    );
+    expect(
+      (await db.budgets())
+          .firstWhere((item) => item.id == 'budget_makan')
+          .amount,
+      1000000,
+    );
+  });
+
+  test('rule gaji menambah Budget tabungan sekali per bulan', () async {
+    final db = DatabaseHelper.instance;
+    await db.saveBudget(
+      const Budget(
+        id: 'budget_tabungan',
+        name: 'Dana Darurat',
+        iconKey: 'savings',
+        color: Color(0xFF26A69A),
+        type: BudgetType.tabungan,
+        amount: 100000,
+      ),
+    );
+    await db.saveSalaryAllocations([
+      {
+        'budget_id': 'budget_tabungan',
+        'amount': 50000,
+        'percentage': null,
+        'salary': 0,
+        'day': 10,
+      },
+    ]);
+
+    expect(await db.applySalaryAllocations(DateTime(2026, 9, 10)), isTrue);
+    expect(
+      (await db.budgets())
+          .firstWhere((budget) => budget.id == 'budget_tabungan')
+          .amount,
+      150000,
+    );
+    expect(await db.applySalaryAllocations(DateTime(2026, 9, 20)), isFalse);
+    expect(
+      (await db.budgets())
+          .firstWhere((budget) => budget.id == 'budget_tabungan')
+          .amount,
+      150000,
+    );
+  });
+
+  test('transaksi bisa masuk pos budget tanpa bergantung kategori', () async {
+    final db = DatabaseHelper.instance;
+    const budget = Budget(
+      id: 'budget_bebas',
+      name: 'Budget Bebas',
+      iconKey: 'savings',
+      color: Color(0xFF26A69A),
+      type: BudgetType.tabungan,
+      amount: 500000,
+    );
+    await db.saveBudget(budget);
+    await db.insert(
+      TransactionModel(
+        amount: 25000,
+        categoryId: 'makanan',
+        budgetId: budget.id,
+        date: DateTime(2026, 8, 12),
+        type: TxType.expense,
+      ),
+    );
+    expect(
+      (await db.all()).where((item) => item.budgetId == budget.id),
+      hasLength(1),
+    );
+    await db.deleteBudget(budget.id);
+    expect(
+      (await db.all()).where((item) => item.budgetId == budget.id),
+      isEmpty,
+    );
   });
 
   test('import Excel mencocokkan kategori dan fallback ke Lainnya', () async {
@@ -469,7 +612,7 @@ void main() {
       SharedPreferences.setMockInitialValues({});
       final db = DatabaseHelper.instance;
       final raw = await db.database;
-      for (final table in ['transactions', 'recurrings', 'budgets']) {
+      for (final table in ['transactions', 'recurrings']) {
         await raw.delete(table, where: 'category_id = ?', whereArgs: ['kopi']);
       }
 
