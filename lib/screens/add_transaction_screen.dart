@@ -21,9 +21,14 @@ class AddTransactionScreen extends StatefulWidget {
 
   /// Prefill transaksi baru, misalnya dari catatan utang/piutang.
   final TransactionModel? draft;
+  final String? budgetId;
 
-  const AddTransactionScreen({super.key, this.existing, this.draft})
-    : assert(existing == null || draft == null);
+  const AddTransactionScreen({
+    super.key,
+    this.existing,
+    this.draft,
+    this.budgetId,
+  }) : assert(existing == null || draft == null);
 
   @override
   State<AddTransactionScreen> createState() => _AddTransactionScreenState();
@@ -130,6 +135,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       receiptPath: _receiptPath,
       sourceType: widget.existing?.sourceType,
       sourceId: widget.existing?.sourceId,
+      budgetId: widget.existing?.budgetId ?? widget.budgetId,
     );
     final provider = context.read<TransactionProvider>();
     setState(() => _saving = true);

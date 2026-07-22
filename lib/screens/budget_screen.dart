@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../models/budget.dart';
 import '../models/category.dart';
 import '../models/transaction.dart';
 import '../providers/budget_provider.dart';
@@ -10,15 +11,18 @@ import '../providers/transaction_provider.dart';
 import '../utils/app_style.dart';
 import '../utils/formatters.dart';
 import '../widgets/animated_widgets.dart';
-import '../widgets/month_selector.dart';
 import '../widgets/page_header.dart';
 import '../widgets/theme_artwork.dart';
+import '../widgets/month_selector.dart';
 import '../widgets/transaction_detail_sheet.dart';
+import 'add_transaction_screen.dart';
 import 'debts_view.dart';
 import 'goals_view.dart';
 import 'recap_screen.dart';
 
 enum _BudgetTab { budget, target, utang }
+
+bool _budgetSheetOpen = false;
 
 class BudgetScreen extends StatefulWidget {
   const BudgetScreen({super.key});
@@ -33,23 +37,19 @@ class _BudgetScreenState extends State<BudgetScreen> {
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
-    final headerArtworkTile = settings.preset.id == 'frieren' ? 7 : 7;
     final isLight = Theme.of(context).brightness == Brightness.light;
-    // Ambil dari preset (budgetSubTabLightBackgrounds/DarkBackgrounds) —
-    // null = tema itu ga punya sub-tab Budget beda warna, jadi ikutan
-    // 1 background tab Budget yang biasa aja (di-set di main_shell).
-    final subTabBgList = isLight
+    final backgrounds = isLight
         ? settings.preset.budgetSubTabLightBackgrounds
         : settings.preset.budgetSubTabDarkBackgrounds;
-    final subTabBg = subTabBgList?[_tab.index];
+    final background = backgrounds?[_tab.index];
     return DecoratedBox(
       decoration: BoxDecoration(
-        gradient: subTabBg == null
+        gradient: background == null
             ? null
             : LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: subTabBg,
+                colors: background,
               ),
       ),
       child: SafeArea(
@@ -57,13 +57,12 @@ class _BudgetScreenState extends State<BudgetScreen> {
           children: [
             PageHeader(
               title: 'Budget',
-              artworkTile: headerArtworkTile,
+              artworkTile: 7,
               action: IconButton(
                 icon: const Icon(Icons.summarize_outlined),
                 tooltip: 'Rekap',
-                onPressed: () {
-                  Navigator.push(context, slideUpRoute(const RecapScreen()));
-                },
+                onPressed: () =>
+                    Navigator.push(context, slideUpRoute(const RecapScreen())),
               ),
             ),
             Padding(
@@ -81,16 +80,13 @@ class _BudgetScreenState extends State<BudgetScreen> {
                   ButtonSegment(value: _BudgetTab.utang, label: Text('Utang')),
                 ],
                 selected: {_tab},
-                onSelectionChanged: (selection) {
-                  setState(() => _tab = selection.first);
-                },
+                onSelectionChanged: (value) =>
+                    setState(() => _tab = value.first),
               ),
             ),
             Expanded(
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 250),
-                switchInCurve: Curves.easeOutCubic,
-                switchOutCurve: Curves.easeInCubic,
                 child: switch (_tab) {
                   _BudgetTab.budget => const _BudgetView(
                     key: ValueKey('budget'),
@@ -107,38 +103,13 @@ class _BudgetScreenState extends State<BudgetScreen> {
   }
 }
 
-/// Isi tab "Budget" (limit per kategori) — konten lama layar ini.
 class _BudgetView extends StatelessWidget {
   const _BudgetView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final txProvider = context.watch<TransactionProvider>();
-    final budgetProvider = context.watch<BudgetProvider>();
-    final budgets = budgetProvider.budgets;
-
-    // Total pengeluaran bulan ini per kategori
-    final spent = {
-      for (final entry in txProvider.totalsByCategory(TxType.expense))
-        entry.key.id: entry.value,
-    };
-    final transactionsByCategory = <String, List<TransactionModel>>{};
-    for (final transaction in txProvider.transactions) {
-      if (transaction.type != TxType.expense || transaction.isTransfer) {
-        continue;
-      }
-      transactionsByCategory
-          .putIfAbsent(transaction.categoryId, () => [])
-          .add(transaction);
-    }
-
-    final withBudget = expenseCategories
-        .where((c) => budgets.containsKey(c.id))
-        .toList();
-    final withoutBudget = expenseCategories
-        .where((c) => !budgets.containsKey(c.id))
-        .toList();
-
+    final budgets = context.watch<BudgetProvider>().budgets;
+    final transactions = context.watch<TransactionProvider>().transactions;
     return Column(
       children: [
         const MonthSelector(),
@@ -146,16 +117,15 @@ class _BudgetView extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
             children: [
-              if (withBudget.isEmpty)
+              if (budgets.isEmpty)
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 32),
+                  padding: const EdgeInsets.symmetric(vertical: 36),
                   child: Column(
                     children: [
                       const ThemeArtwork(tile: 4, size: 88),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 12),
                       Text(
-                        'Belum ada budget yang diatur.\n'
-                        'Pilih kategori di bawah buat mulai.',
+                        'Belum ada budget.\nBuat sesuai kebutuhanmu sendiri.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -163,37 +133,49 @@ class _BudgetView extends StatelessWidget {
                       ),
                     ],
                   ),
-                )
-              else
-                for (var i = 0; i < withBudget.length; i++)
-                  StaggeredItem(
-                    key: ValueKey(
-                      'budget-${txProvider.month}-${withBudget[i].id}',
-                    ),
-                    index: i,
-                    child: _BudgetTile(
-                      category: withBudget[i],
-                      limit: budgets[withBudget[i].id]!,
-                      spent: spent[withBudget[i].id] ?? 0,
-                      transactions:
-                          transactionsByCategory[withBudget[i].id] ?? const [],
-                    ),
-                  ),
-              if (withoutBudget.isNotEmpty) ...[
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(4, 20, 4, 8),
-                  child: Text(
-                    'Belum diatur',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
                 ),
-                for (final category in withoutBudget)
-                  _UnsetTile(category: category),
-              ],
+              for (final type in BudgetType.values)
+                if (budgets.any((budget) => budget.type == type))
+                  Theme(
+                    data: Theme.of(
+                      context,
+                    ).copyWith(dividerColor: Colors.transparent),
+                    child: ExpansionTile(
+                      tilePadding: const EdgeInsets.symmetric(horizontal: 4),
+                      initiallyExpanded: true,
+                      title: Text(
+                        _typeLabel(type),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(
+                        '${budgets.where((item) => item.type == type).length} budget',
+                        style: const TextStyle(fontSize: 11),
+                      ),
+                      children: [
+                        for (final budget in budgets.where(
+                          (item) => item.type == type,
+                        ))
+                          _BudgetCard(
+                            budget: budget,
+                            transactions: transactions
+                                .where(
+                                  (transaction) =>
+                                      transaction.budgetId == budget.id,
+                                )
+                                .toList(),
+                          ),
+                      ],
+                    ),
+                  ),
+              const SizedBox(height: 8),
+              FilledButton.tonalIcon(
+                onPressed: () => _showBudgetSheet(context),
+                icon: const Icon(Icons.add),
+                label: const Text('Tambah Budget'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
             ],
           ),
         ),
@@ -202,34 +184,23 @@ class _BudgetView extends StatelessWidget {
   }
 }
 
-/// Kategori yang udah punya budget: progress + status.
-class _BudgetTile extends StatelessWidget {
-  final Category category;
-  final double limit;
-  final double spent;
-  final List<TransactionModel> transactions;
+class _BudgetCard extends StatelessWidget {
+  const _BudgetCard({required this.budget, required this.transactions});
 
-  const _BudgetTile({
-    required this.category,
-    required this.limit,
-    required this.spent,
-    required this.transactions,
-  });
+  final Budget budget;
+  final List<TransactionModel> transactions;
 
   @override
   Widget build(BuildContext context) {
-    final fraction = limit == 0 ? 0.0 : spent / limit;
-    final over = spent > limit;
-    final warning = !over && fraction >= 0.75;
-    final statusColor = over
-        ? expenseColor
-        : warning
-        ? const Color(0xFFFFA726)
-        : incomeColor;
-
+    final spent = transactions
+        .where((transaction) => transaction.type == TxType.expense)
+        .fold<double>(0, (sum, transaction) => sum + transaction.amount);
+    final fraction = budget.amount == 0 ? 0.0 : spent / budget.amount;
+    final over = spent > budget.amount;
+    final statusColor = over ? expenseColor : budget.color;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       decoration: BoxDecoration(
         color: cardColor(context),
         borderRadius: BorderRadius.circular(16),
@@ -240,71 +211,81 @@ class _BudgetTile extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: categoryGradient(category.color),
+              InkWell(
+                onTap: () => _showBudgetSheet(context, existing: budget),
+                customBorder: const CircleBorder(),
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: categoryGradient(budget.color),
+                  ),
+                  child: Center(
+                    child: budget.iconWidget(color: Colors.white, size: 20),
+                  ),
                 ),
-                child: Icon(category.icon, color: Colors.white, size: 20),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      category.name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
+                child: InkWell(
+                  onTap: () => _showBudgetSheet(context, existing: budget),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        budget.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
                       ),
-                    ),
-                    Text(
-                      '${rupiah(spent)} dari ${rupiah(limit)}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      Text(
+                        '${rupiah(spent)} dari ${rupiah(budget.amount)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-              if (over)
-                const Icon(
-                  Icons.warning_amber_rounded,
-                  color: expenseColor,
-                  size: 20,
-                ),
               IconButton(
-                tooltip: 'Atur budget',
-                onPressed: () =>
-                    _showSetBudgetSheet(context, category, existing: limit),
-                icon: const Icon(Icons.tune, size: 19),
+                tooltip: 'Tambah transaksi',
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => AddTransactionScreen(budgetId: budget.id),
+                  ),
+                ),
+                icon: Icon(
+                  Icons.add_circle_outline,
+                  color: budget.color,
+                  size: 24,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 12),
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
-            child: TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: fraction.clamp(0.0, 1.0)),
-              duration: const Duration(milliseconds: 800),
-              curve: Curves.easeOutCubic,
-              builder: (context, value, _) => LinearProgressIndicator(
-                value: value,
-                minHeight: 8,
-                backgroundColor: statusColor.withValues(alpha: 0.12),
-                valueColor: AlwaysStoppedAnimation(statusColor),
-              ),
+            child: LinearProgressIndicator(
+              value: fraction.clamp(0, 1),
+              minHeight: 8,
+              backgroundColor: statusColor.withValues(alpha: 0.12),
+              valueColor: AlwaysStoppedAnimation(statusColor),
             ),
           ),
           const SizedBox(height: 6),
           Text(
             over
-                ? 'Jebol ${rupiah(spent - limit)}!'
-                : 'Sisa ${rupiah(limit - spent)}',
+                ? 'Jebol ${rupiah(spent - budget.amount)}'
+                : 'Sisa ${rupiah(budget.amount - spent)}',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
@@ -324,7 +305,7 @@ class _BudgetTile extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(bottom: 10),
                       child: Text(
-                        'Belum ada pengeluaran di kategori ini.',
+                        'Belum ada transaksi di budget ini.',
                         style: TextStyle(
                           fontSize: 12,
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -339,35 +320,26 @@ class _BudgetTile extends StatelessWidget {
                         contentPadding: EdgeInsets.zero,
                         onTap: () =>
                             showTransactionDetailSheet(context, transaction),
+                        leading: transaction.category.iconWidget(
+                          color: transaction.category.color,
+                          size: 20,
+                        ),
                         title: Text(
                           transaction.note.isEmpty
-                              ? tanggalPendek(transaction.date)
+                              ? transaction.category.name
                               : transaction.note,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        subtitle: transaction.note.isEmpty
-                            ? null
-                            : Text(tanggalPendek(transaction.date)),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              rupiah(transaction.amount),
-                              style: const TextStyle(
-                                color: expenseColor,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            IconButton(
-                              tooltip: 'Hapus transaksi',
-                              onPressed: () => confirmDeleteTransaction(
-                                context,
-                                transaction,
-                              ),
-                              icon: const Icon(Icons.delete_outline, size: 19),
-                            ),
-                          ],
+                        subtitle: Text(tanggalPendek(transaction.date)),
+                        trailing: Text(
+                          rupiah(transaction.amount),
+                          style: TextStyle(
+                            color: transaction.type == TxType.expense
+                                ? expenseColor
+                                : incomeColor,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                   ],
@@ -378,155 +350,254 @@ class _BudgetTile extends StatelessWidget {
   }
 }
 
-/// Kategori tanpa budget: tinggal tap buat atur.
-class _UnsetTile extends StatelessWidget {
-  final Category category;
+Future<void> _showBudgetSheet(BuildContext context, {Budget? existing}) async {
+  if (_budgetSheetOpen) return;
+  _budgetSheetOpen = true;
+  try {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _BudgetSheet(existing: existing),
+    );
+  } finally {
+    _budgetSheetOpen = false;
+  }
+}
 
-  const _UnsetTile({required this.category});
+class _BudgetSheet extends StatefulWidget {
+  const _BudgetSheet({this.existing});
+
+  final Budget? existing;
+
+  @override
+  State<_BudgetSheet> createState() => _BudgetSheetState();
+}
+
+class _BudgetSheetState extends State<_BudgetSheet> {
+  late final _name = TextEditingController(text: widget.existing?.name ?? '');
+  late final _amount = TextEditingController(
+    text: widget.existing == null
+        ? ''
+        : groupRibuan(widget.existing!.amount.round().toString()),
+  );
+  late final _emoji = TextEditingController(text: widget.existing?.emoji ?? '');
+  late String _iconKey = widget.existing?.iconKey ?? 'savings';
+  late Color _color = widget.existing?.color ?? categoryColorChoices.first;
+  late BudgetType _type = widget.existing?.type ?? BudgetType.kebutuhan;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _amount.dispose();
+    _emoji.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final name = _name.text.trim();
+    final amount = double.tryParse(_amount.text.replaceAll('.', '')) ?? 0;
+    final emoji = _emoji.text.trim();
+    if (name.isEmpty ||
+        amount <= 0 ||
+        (_iconKey.startsWith('emoji:') && emoji.isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Lengkapi nama, ikon, dan nominal budget'),
+        ),
+      );
+      return;
+    }
+    await context.read<BudgetProvider>().saveBudget(
+      Budget(
+        id:
+            widget.existing?.id ??
+            'budget_${DateTime.now().microsecondsSinceEpoch}',
+        name: name,
+        iconKey: _iconKey.startsWith('emoji:') ? 'emoji:$emoji' : _iconKey,
+        color: _color,
+        type: _type,
+        amount: amount,
+      ),
+    );
+    if (mounted) Navigator.pop(context);
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: cardColor(context),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: cardShadow(context),
-      ),
-      child: ListTile(
-        onTap: () => _showSetBudgetSheet(context, category),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        leading: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: category.color.withValues(alpha: 0.15),
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: Container(
+        decoration: BoxDecoration(
+          color: cardColor(context),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                widget.existing == null ? 'Budget Baru' : 'Edit Budget',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _name,
+                autofocus: widget.existing == null,
+                decoration: const InputDecoration(labelText: 'Nama budget'),
+              ),
+              const SizedBox(height: 12),
+              InputDecorator(
+                decoration: const InputDecoration(labelText: 'Tipe budget'),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<BudgetType>(
+                    value: _type,
+                    isExpanded: true,
+                    isDense: true,
+                    items: [
+                      for (final type in BudgetType.values)
+                        DropdownMenuItem(
+                          value: type,
+                          child: Text(
+                            _typeLabel(type),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                    ],
+                    onChanged: (value) =>
+                        setState(() => _type = value ?? _type),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _amount,
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  RibuanInputFormatter(),
+                ],
+                decoration: const InputDecoration(
+                  labelText: 'Nominal budget',
+                  prefixText: 'Rp ',
+                ),
+              ),
+              const SizedBox(height: 16),
+              SegmentedButton<bool>(
+                segments: const [
+                  ButtonSegment(value: false, label: Text('Ikon warna')),
+                  ButtonSegment(value: true, label: Text('Emoji')),
+                ],
+                selected: {_iconKey.startsWith('emoji:')},
+                onSelectionChanged: (value) => setState(
+                  () => _iconKey = value.first ? 'emoji:' : 'savings',
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (_iconKey.startsWith('emoji:'))
+                TextField(
+                  controller: _emoji,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 32),
+                  decoration: const InputDecoration(
+                    labelText: 'Emoji budget',
+                    hintText: '🦆',
+                  ),
+                )
+              else
+                GridView.count(
+                  crossAxisCount: 7,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: 6,
+                  crossAxisSpacing: 6,
+                  children: [
+                    for (final entry in categoryIconChoices.entries)
+                      InkWell(
+                        onTap: () => setState(() => _iconKey = entry.key),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: _iconKey == entry.key
+                                ? _color.withValues(alpha: 0.18)
+                                : Colors.transparent,
+                            border: Border.all(
+                              color: _iconKey == entry.key
+                                  ? _color
+                                  : Theme.of(
+                                      context,
+                                    ).colorScheme.outlineVariant,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(entry.value, color: _color),
+                        ),
+                      ),
+                  ],
+                ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 9,
+                runSpacing: 9,
+                children: [
+                  for (final color in categoryColorChoices)
+                    InkWell(
+                      onTap: () => setState(() => _color = color),
+                      customBorder: const CircleBorder(),
+                      child: CircleAvatar(
+                        radius: 16,
+                        backgroundColor: color,
+                        child: color == _color
+                            ? const Icon(
+                                Icons.check,
+                                color: Colors.white,
+                                size: 17,
+                              )
+                            : null,
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  if (widget.existing != null) ...[
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () async {
+                          await context.read<BudgetProvider>().removeBudget(
+                            widget.existing!.id,
+                          );
+                          if (context.mounted) Navigator.pop(context);
+                        },
+                        child: const Text('Hapus'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                  ],
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: _save,
+                      child: const Text('Simpan'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          child: Icon(category.icon, color: category.color, size: 20),
-        ),
-        title: Text(
-          category.name,
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-        ),
-        trailing: Icon(
-          Icons.add_circle_outline,
-          color: Theme.of(context).colorScheme.primary,
-          size: 22,
         ),
       ),
     );
   }
 }
 
-/// Bottom sheet buat atur/hapus limit budget satu kategori.
-Future<void> _showSetBudgetSheet(
-  BuildContext context,
-  Category category, {
-  double? existing,
-}) {
-  final controller = TextEditingController(
-    text: existing == null ? '' : groupRibuan(existing.toInt().toString()),
-  );
-  return showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (sheetContext) => Padding(
-      // Biar sheet naik pas keyboard muncul
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.viewInsetsOf(sheetContext).bottom,
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          color: cardColor(sheetContext),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(category.icon, color: category.color, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  'Budget ${category.name}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: controller,
-              autofocus: true,
-              keyboardType: TextInputType.number,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                RibuanInputFormatter(),
-              ],
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              decoration: const InputDecoration(
-                prefixText: 'Rp ',
-                hintText: '0',
-                helperText: 'Limit pengeluaran per bulan',
-                border: UnderlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                if (existing != null) ...[
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () {
-                        sheetContext.read<BudgetProvider>().removeBudget(
-                          category.id,
-                        );
-                        Navigator.pop(sheetContext);
-                      },
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: expenseColor,
-                        side: BorderSide(
-                          color: expenseColor.withValues(alpha: 0.5),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      child: const Text('Hapus Budget'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                ],
-                Expanded(
-                  child: FilledButton(
-                    onPressed: () {
-                      final amount =
-                          double.tryParse(
-                            controller.text.replaceAll('.', ''),
-                          ) ??
-                          0;
-                      if (amount <= 0) return;
-                      sheetContext.read<BudgetProvider>().setBudget(
-                        category.id,
-                        amount,
-                      );
-                      Navigator.pop(sheetContext);
-                    },
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    child: const Text('Simpan'),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-}
+String _typeLabel(BudgetType type) => switch (type) {
+  BudgetType.kebutuhan => 'Kebutuhan',
+  BudgetType.keinginan => 'Keinginan',
+  BudgetType.tabungan => 'Tabungan',
+};

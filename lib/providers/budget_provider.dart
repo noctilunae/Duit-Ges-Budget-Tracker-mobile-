@@ -1,29 +1,29 @@
 import 'package:flutter/foundation.dart';
 
 import '../db/database_helper.dart';
+import '../models/budget.dart';
 
 /// Nyimpen limit budget bulanan per kategori pengeluaran.
 class BudgetProvider extends ChangeNotifier {
   final _db = DatabaseHelper.instance;
 
-  Map<String, double> _budgets = {};
+  List<Budget> _budgets = [];
 
-  Map<String, double> get budgets => _budgets;
+  List<Budget> get budgets => _budgets;
 
-  double? limitFor(String categoryId) => _budgets[categoryId];
-
-  Future<void> load() async {
+  Future<void> load({bool applyRules = true}) async {
+    if (applyRules) await _db.applySalaryAllocations();
     _budgets = await _db.budgets();
     notifyListeners();
   }
 
-  Future<void> setBudget(String categoryId, double amount) async {
-    await _db.setBudget(categoryId, amount);
+  Future<void> saveBudget(Budget budget) async {
+    await _db.saveBudget(budget);
     await load();
   }
 
-  Future<void> removeBudget(String categoryId) async {
-    await _db.deleteBudget(categoryId);
+  Future<void> removeBudget(String id) async {
+    await _db.deleteBudget(id);
     await load();
   }
 }

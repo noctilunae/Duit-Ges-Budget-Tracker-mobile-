@@ -14,6 +14,7 @@ import '../models/category.dart'
         goalSaving,
         transferIn,
         transferOut;
+import '../models/budget.dart';
 import '../models/debt.dart';
 import '../models/goal.dart';
 import '../models/recurring.dart';
@@ -25,7 +26,7 @@ enum RecapGrouping { daily, weekly, monthly, yearly }
 class DatabaseHelper {
   DatabaseHelper._();
   static final DatabaseHelper instance = DatabaseHelper._();
-  static const schemaVersion = 9;
+  static const schemaVersion = 13;
 
   Database? _db;
 
@@ -48,7 +49,8 @@ class DatabaseHelper {
             wallet_id INTEGER NOT NULL DEFAULT 1,
             receipt_path TEXT,
             source_type TEXT,
-            source_id INTEGER
+            source_id INTEGER,
+            budget_id TEXT
           )
         ''');
         await db.execute(_createBudgets);
@@ -61,11 +63,12 @@ class DatabaseHelper {
           await db.execute(sql);
         }
         await db.execute(_createRecurrings);
+        await db.execute(_createSalaryAllocations);
       },
       // Migrasi bertahap buat app yang udah keinstall — data lama aman.
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
-          await db.execute(_createBudgets);
+          await db.execute(_createBudgetsV2);
         }
         if (oldVersion < 3) {
           await db.execute(_createWallets);
@@ -76,8 +79,8 @@ class DatabaseHelper {
           );
         }
         if (oldVersion < 4) {
-          await db.execute(_createGoals);
-          await db.execute(_createDebts);
+          await db.execute(_createGoalsV4);
+          await db.execute(_createDebtsV4);
         }
         if (oldVersion < 5) {
           await db.execute(
@@ -107,6 +110,47 @@ class DatabaseHelper {
           );
           await db.execute(
             'ALTER TABLE debts ADD COLUMN paid INTEGER NOT NULL DEFAULT 0',
+          );
+        }
+        if (oldVersion < 10) {
+          await db.execute(
+            "ALTER TABLE budgets ADD COLUMN budget_type TEXT NOT NULL DEFAULT 'kebutuhan'",
+          );
+          await db.execute('ALTER TABLE debts ADD COLUMN due_date TEXT');
+          await db.execute(_createSalaryAllocationsV10);
+        }
+        if (oldVersion < 11) {
+          await db.execute('ALTER TABLE budgets RENAME TO budgets_category');
+          await db.execute(_createBudgets);
+          await db.execute('''
+            INSERT INTO budgets(id, name, icon, color, budget_type, amount)
+            SELECT category_id,
+                   upper(substr(category_id, 1, 1)) ||
+                     replace(substr(category_id, 2), '_', ' '),
+                   'category', 4286151036,
+                   budget_type, amount FROM budgets_category
+          ''');
+          await db.execute('DROP TABLE budgets_category');
+          await db.execute(
+            'ALTER TABLE salary_allocations RENAME TO salary_allocations_category',
+          );
+          await db.execute(_createSalaryAllocations);
+          await db.execute('''
+            INSERT INTO salary_allocations(
+              budget_id, amount, percentage, salary, day, last_period)
+            SELECT category_id, amount, percentage, salary, day, last_period
+            FROM salary_allocations_category
+          ''');
+          await db.execute('DROP TABLE salary_allocations_category');
+        }
+        if (oldVersion < 12) {
+          await db.execute(
+            'ALTER TABLE transactions ADD COLUMN budget_id TEXT',
+          );
+        }
+        if (oldVersion < 13) {
+          await db.execute(
+            "ALTER TABLE goals ADD COLUMN icon TEXT NOT NULL DEFAULT 'savings'",
           );
         }
       },
@@ -145,8 +189,42 @@ class DatabaseHelper {
 
   static const _createBudgets = '''
     CREATE TABLE IF NOT EXISTS budgets(
-      category_id TEXT PRIMARY KEY,
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      icon TEXT NOT NULL,
+      color INTEGER NOT NULL,
+      budget_type TEXT NOT NULL DEFAULT 'kebutuhan',
       amount INTEGER NOT NULL
+    )
+  ''';
+
+  static const _createBudgetsV2 = '''
+    CREATE TABLE IF NOT EXISTS budgets(
+      category_id TEXT PRIMARY KEY,
+      amount REAL NOT NULL
+    )
+  ''';
+
+  static const _createSalaryAllocations = '''
+    CREATE TABLE IF NOT EXISTS salary_allocations(
+      budget_id TEXT PRIMARY KEY,
+      amount INTEGER,
+      percentage REAL,
+      salary INTEGER NOT NULL,
+      day INTEGER NOT NULL,
+      last_period TEXT
+    )
+  ''';
+
+  static const _createSalaryAllocationsV10 = '''
+    CREATE TABLE IF NOT EXISTS salary_allocations(
+      category_id TEXT PRIMARY KEY,
+      budget_type TEXT NOT NULL,
+      amount INTEGER,
+      percentage REAL,
+      salary INTEGER NOT NULL,
+      day INTEGER NOT NULL,
+      last_period TEXT
     )
   ''';
 
@@ -166,6 +244,17 @@ class DatabaseHelper {
       name TEXT NOT NULL,
       target INTEGER NOT NULL,
       saved INTEGER NOT NULL DEFAULT 0,
+      color INTEGER NOT NULL,
+      icon TEXT NOT NULL DEFAULT 'savings'
+    )
+  ''';
+
+  static const _createGoalsV4 = '''
+    CREATE TABLE IF NOT EXISTS goals(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      target REAL NOT NULL,
+      saved REAL NOT NULL DEFAULT 0,
       color INTEGER NOT NULL
     )
   ''';
@@ -179,7 +268,20 @@ class DatabaseHelper {
       note TEXT NOT NULL DEFAULT '',
       date TEXT NOT NULL,
       settled INTEGER NOT NULL DEFAULT 0,
-      paid INTEGER NOT NULL DEFAULT 0
+      paid INTEGER NOT NULL DEFAULT 0,
+      due_date TEXT
+    )
+  ''';
+
+  static const _createDebtsV4 = '''
+    CREATE TABLE IF NOT EXISTS debts(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      person TEXT NOT NULL,
+      amount REAL NOT NULL,
+      is_receivable INTEGER NOT NULL,
+      note TEXT NOT NULL DEFAULT '',
+      date TEXT NOT NULL,
+      settled INTEGER NOT NULL DEFAULT 0
     )
   ''';
 
@@ -220,7 +322,10 @@ class DatabaseHelper {
       ),
       (
         'budgets',
-        _createBudgets.replaceFirst(' IF NOT EXISTS', ''),
+        '''CREATE TABLE budgets(
+          category_id TEXT PRIMARY KEY,
+          amount INTEGER NOT NULL
+        )''',
         ['category_id', 'amount'],
       ),
       (
@@ -230,7 +335,13 @@ class DatabaseHelper {
       ),
       (
         'goals',
-        _createGoals.replaceFirst(' IF NOT EXISTS', ''),
+        '''CREATE TABLE goals(
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          target INTEGER NOT NULL,
+          saved INTEGER NOT NULL DEFAULT 0,
+          color INTEGER NOT NULL
+        )''',
         ['id', 'name', 'target', 'saved', 'color'],
       ),
       (
@@ -600,30 +711,113 @@ class DatabaseHelper {
     ];
   }
 
-  Future<Map<String, double>> budgets() async {
+  Future<List<Budget>> budgets() async {
     final db = await database;
-    final rows = await db.query('budgets');
-    return {
-      for (final row in rows)
-        row['category_id'] as String: (row['amount'] as num).toDouble(),
-    };
+    final rows = await db.query('budgets', orderBy: 'budget_type, name');
+    return rows.map(Budget.fromMap).toList();
   }
 
-  Future<void> setBudget(String categoryId, double amount) async {
+  Future<void> saveBudget(Budget budget) async {
     final db = await database;
-    await db.insert('budgets', {
-      'category_id': categoryId,
-      'amount': amount.round(),
-    }, conflictAlgorithm: ConflictAlgorithm.replace);
-  }
-
-  Future<void> deleteBudget(String categoryId) async {
-    final db = await database;
-    await db.delete(
+    await db.insert(
       'budgets',
-      where: 'category_id = ?',
-      whereArgs: [categoryId],
+      budget.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
     );
+  }
+
+  Future<List<Map<String, Object?>>> salaryAllocations() async {
+    final db = await database;
+    return db.query('salary_allocations', orderBy: 'budget_id');
+  }
+
+  Future<void> saveSalaryAllocations(List<Map<String, Object?>> rows) async {
+    final categories = <Object?>{};
+    for (final row in rows) {
+      final day = row['day'] as int? ?? 0;
+      final salary = row['salary'] as int? ?? 0;
+      final amount = row['amount'] as int?;
+      final percentage = row['percentage'] as num?;
+      if (!categories.add(row['budget_id']) ||
+          day < 1 ||
+          day > 28 ||
+          salary < 0 ||
+          (amount == null) == (percentage == null) ||
+          (amount != null && amount <= 0) ||
+          (percentage != null && (percentage <= 0 || percentage > 100))) {
+        throw ArgumentError('Rule pembagian gaji tidak valid');
+      }
+    }
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.delete('salary_allocations');
+      for (final row in rows) {
+        await txn.insert('salary_allocations', row);
+      }
+    });
+  }
+
+  /// Terapkan rule bulan ini sekali saja. Budget kategori yang tidak ada di
+  /// rule tidak disentuh.
+  Future<bool> applySalaryAllocations([
+    DateTime? at,
+    bool force = false,
+  ]) async {
+    final db = await database;
+    final now = at ?? DateTime.now();
+    final rows = await db.query('salary_allocations');
+    if (rows.isEmpty || (!force && now.day < (rows.first['day'] as int))) {
+      return false;
+    }
+    final period = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+    if (!force && rows.first['last_period'] == period) return false;
+    await db.transaction((txn) async {
+      for (final row in rows) {
+        final salary = row['salary'] as int;
+        final percentage = row['percentage'] as num?;
+        final amount =
+            row['amount'] as int? ?? (salary * (percentage ?? 0) / 100).round();
+        if (amount <= 0) continue;
+        final budget = await txn.query(
+          'budgets',
+          columns: ['amount', 'budget_type'],
+          where: 'id = ?',
+          whereArgs: [row['budget_id']],
+          limit: 1,
+        );
+        if (budget.isEmpty) continue;
+        final savedAmount =
+            budget.first['budget_type'] == BudgetType.tabungan.name
+            ? (budget.first['amount'] as int) + amount
+            : amount;
+        await txn.update(
+          'budgets',
+          {'amount': savedAmount},
+          where: 'id = ?',
+          whereArgs: [row['budget_id']],
+        );
+      }
+      await txn.update('salary_allocations', {'last_period': period});
+    });
+    return true;
+  }
+
+  Future<void> deleteBudget(String id) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.update(
+        'transactions',
+        {'budget_id': null},
+        where: 'budget_id = ?',
+        whereArgs: [id],
+      );
+      await txn.delete(
+        'salary_allocations',
+        where: 'budget_id = ?',
+        whereArgs: [id],
+      );
+      await txn.delete('budgets', where: 'id = ?', whereArgs: [id]);
+    });
   }
 
   // ===== Dompet =====
@@ -998,9 +1192,8 @@ class DatabaseHelper {
     final result = await db.rawQuery(
       'SELECT '
       '(SELECT COUNT(*) FROM transactions WHERE category_id = ?) + '
-      '(SELECT COUNT(*) FROM recurrings WHERE category_id = ?) + '
-      '(SELECT COUNT(*) FROM budgets WHERE category_id = ?) AS c',
-      [categoryId, categoryId, categoryId],
+      '(SELECT COUNT(*) FROM recurrings WHERE category_id = ?) AS c',
+      [categoryId, categoryId],
     );
     return result.first['c'] as int;
   }

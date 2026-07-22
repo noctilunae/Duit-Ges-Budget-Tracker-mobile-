@@ -25,6 +25,7 @@ import '../widgets/theme_artwork.dart';
 import '../widgets/looping_asset_video.dart';
 import 'receipts_screen.dart';
 import 'recurrings_screen.dart';
+import 'salary_rule_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -330,6 +331,21 @@ class SettingsScreen extends StatelessWidget {
                             ),
                           );
                         },
+                      ),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.pie_chart_outline),
+                        title: const Text('Pembagian Gaji Bulanan'),
+                        subtitle: const Text(
+                          'Buat budget kategori otomatis tiap bulan',
+                        ),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const SalaryRuleScreen(),
+                          ),
+                        ),
                       ),
                       const _ReminderSetting(),
                       SwitchListTile(

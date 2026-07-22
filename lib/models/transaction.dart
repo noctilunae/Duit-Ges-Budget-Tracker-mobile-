@@ -13,6 +13,7 @@ class TransactionModel {
   final String? receiptPath;
   final String? sourceType;
   final int? sourceId;
+  final String? budgetId;
 
   const TransactionModel({
     this.id,
@@ -25,6 +26,7 @@ class TransactionModel {
     this.receiptPath,
     this.sourceType,
     this.sourceId,
+    this.budgetId,
   });
 
   Category get category => categoryById(categoryId);
@@ -45,6 +47,7 @@ class TransactionModel {
       'receipt_path': receiptPath,
       'source_type': sourceType,
       'source_id': sourceId,
+      'budget_id': budgetId,
     };
   }
 
@@ -60,6 +63,7 @@ class TransactionModel {
       receiptPath: map['receipt_path'] as String?,
       sourceType: map['source_type'] as String?,
       sourceId: map['source_id'] as int?,
+      budgetId: map['budget_id'] as String?,
     );
   }
 }
