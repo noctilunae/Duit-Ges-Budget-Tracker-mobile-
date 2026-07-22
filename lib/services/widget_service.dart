@@ -72,6 +72,8 @@ class WidgetService {
       }
       if (syncOptions) await _syncOptions(db, prefs);
       await HomeWidget.updateWidget(androidName: 'SaldoWidgetProvider');
+      await HomeWidget.updateWidget(androidName: 'SaldoWidgetMediumProvider');
+      await HomeWidget.updateWidget(androidName: 'SaldoWidgetCompactProvider');
     } catch (_) {
       // Widget gagal update (misal belum dipasang) — bukan masalah.
     }

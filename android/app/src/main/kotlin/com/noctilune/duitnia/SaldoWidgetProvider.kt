@@ -30,7 +30,16 @@ import java.util.Locale
 import kotlin.math.max
 
 /** Widget interaktif: pilih tipe/kategori/dompet, ketik nominal, lalu simpan. */
-class SaldoWidgetProvider : HomeWidgetProvider() {
+open class SaldoWidgetProvider : HomeWidgetProvider() {
+    /** Layout per varian widget. Subclass menimpa buat versi 3-tile / 1-tile. */
+    protected open val layoutRes: Int get() = R.layout.saldo_widget
+
+    /** Nominal diisi lewat dialog keyboard, bukan numpad widget. */
+    protected open val amountPopup: Boolean get() = false
+
+    /** Ringkasan 1 baris tidak punya kontrol form. */
+    protected open val compact: Boolean get() = false
+
     override fun onUpdate(
         context: Context,
         appWidgetManager: AppWidgetManager,
@@ -242,15 +251,43 @@ class SaldoWidgetProvider : HomeWidgetProvider() {
         val walletId = prefs.getInt(state(widgetId, "wallet"), walletOptions.first().id.toInt())
         val wallet = walletOptions.firstOrNull { it.id.toInt() == walletId } ?: walletOptions.first()
         val amount = prefs.getString(state(widgetId, "amount"), "").orEmpty()
-
-        val views = RemoteViews(context.packageName, R.layout.saldo_widget).apply {
+        val launch = HomeWidgetLaunchIntent.getActivity(
+            context,
+            AppActivity::class.java,
+            Uri.parse("duitges://home"),
+        )
+        val amountInput = PendingIntent.getActivity(
+            context,
+            widgetId,
+            Intent(context, WidgetAmountActivity::class.java).putExtra(
+                AppWidgetManager.EXTRA_APPWIDGET_ID,
+                widgetId,
+            ),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val views = RemoteViews(context.packageName, layoutRes).apply {
             setImageViewBitmap(
                 R.id.widget_background,
                 gradientBitmap(context, manager, widgetId, start, end),
             )
+            if (compact) {
+                setTextViewText(R.id.widget_bulan_big, prefs.getString("widget_bulan", "Duit Ges"))
+                setTextViewText(R.id.widget_saldo_big, prefs.getString("widget_saldo", "Rp 0"))
+                setTextViewText(R.id.widget_masuk, prefs.getString("widget_masuk", "Rp 0"))
+                setTextViewText(R.id.widget_keluar, prefs.getString("widget_keluar", "Rp 0"))
+                COMPACT_FOREGROUND_IDS.forEach { setTextColor(it, foreground) }
+                setTextColor(R.id.widget_masuk, INCOME_COLOR)
+                setTextColor(R.id.widget_keluar, EXPENSE_COLOR)
+                setInt(R.id.widget_add, "setColorFilter", accent)
+                setOnClickPendingIntent(R.id.widget_root, launch)
+                setOnClickPendingIntent(R.id.widget_add, launch)
+                return@apply
+            }
+
             setImageViewBitmap(R.id.widget_save_background, roundedBitmap(accent))
             setTextViewText(R.id.widget_bulan, prefs.getString("widget_bulan", "Duit Ges"))
             setTextViewText(R.id.widget_saldo, prefs.getString("widget_saldo", "Rp 0"))
+            if (amountPopup) setOnClickPendingIntent(R.id.widget_nominal, amountInput)
             setTextViewText(R.id.widget_status, prefs.getString(state(widgetId, "status"), ""))
             setTextViewText(R.id.widget_amount, if (amount.isEmpty()) "0" else number(amount.toLong()))
             setTextViewText(R.id.widget_wallet_label, wallet.name)
@@ -261,6 +298,7 @@ class SaldoWidgetProvider : HomeWidgetProvider() {
             setTextViewText(R.id.widget_category_page, "${page + 1}/$pageCount")
 
             FOREGROUND_IDS.forEach { setTextColor(it, foreground) }
+            if (!amountPopup) KEYPAD_FOREGROUND_IDS.forEach { setTextColor(it, foreground) }
             setTextColor(R.id.widget_save, contrastingText(accent))
             setTextColor(R.id.widget_status, accent)
             setTextColor(R.id.widget_type_expense, if (type == "expense") accent else foreground)
@@ -311,14 +349,7 @@ class SaldoWidgetProvider : HomeWidgetProvider() {
             )
             setTextColor(R.id.widget_category_next_label, accent)
 
-            setOnClickPendingIntent(
-                R.id.widget_root,
-                HomeWidgetLaunchIntent.getActivity(
-                    context,
-                    AppActivity::class.java,
-                    Uri.parse("duitges://home"),
-                ),
-            )
+            setOnClickPendingIntent(R.id.widget_root, launch)
             setOnClickPendingIntent(
                 R.id.widget_type_expense,
                 broadcast(context, widgetId, "type", "expense"),
@@ -332,11 +363,13 @@ class SaldoWidgetProvider : HomeWidgetProvider() {
                 broadcast(context, widgetId, "next"),
             )
             setOnClickPendingIntent(R.id.widget_wallet, broadcast(context, widgetId, "wallet"))
-            DIGIT_IDS.forEach { (viewId, digit) ->
-                setOnClickPendingIntent(viewId, broadcast(context, widgetId, "digit", digit))
+            if (!amountPopup) {
+                DIGIT_IDS.forEach { (viewId, digit) ->
+                    setOnClickPendingIntent(viewId, broadcast(context, widgetId, "digit", digit))
+                }
+                setOnClickPendingIntent(R.id.widget_key_back, broadcast(context, widgetId, "back"))
+                setOnClickPendingIntent(R.id.widget_key_clear, broadcast(context, widgetId, "clear"))
             }
-            setOnClickPendingIntent(R.id.widget_key_back, broadcast(context, widgetId, "back"))
-            setOnClickPendingIntent(R.id.widget_key_clear, broadcast(context, widgetId, "clear"))
             setOnClickPendingIntent(R.id.widget_save, broadcast(context, widgetId, "save"))
         }
         manager.updateAppWidget(widgetId, views)
@@ -348,7 +381,7 @@ class SaldoWidgetProvider : HomeWidgetProvider() {
         action: String,
         value: String = "",
     ): PendingIntent {
-        val intent = Intent(context, SaldoWidgetProvider::class.java).apply {
+        val intent = Intent(context, javaClass).apply {
             this.action = ACTION_PREFIX + action
             putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
             putExtra(EXTRA_VALUE, value)
@@ -415,19 +448,28 @@ class SaldoWidgetProvider : HomeWidgetProvider() {
     ): Bitmap {
         val density = context.resources.displayMetrics.density
         val options = manager.getAppWidgetOptions(widgetId)
-        val width = (max(320, options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH)) * density).toInt()
-        val height = (max(430, options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT)) * density).toInt()
-        val key = "$width:$height:$start:$end"
+        val fallbackHeight = when (layoutRes) {
+            R.layout.saldo_widget_compact -> 48
+            R.layout.saldo_widget_medium -> 180
+            else -> 430
+        }
+        val width = (options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH)
+            .takeIf { it > 0 } ?: 320) * density
+        val height = (options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT)
+            .takeIf { it > 0 } ?: fallbackHeight) * density
+        val bitmapWidth = width.toInt()
+        val bitmapHeight = height.toInt()
+        val key = "$bitmapWidth:$bitmapHeight:$start:$end"
         if (key == cachedBackgroundKey) cachedBackground?.let { return it }
-        return Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).also { bitmap ->
+        return Bitmap.createBitmap(bitmapWidth, bitmapHeight, Bitmap.Config.ARGB_8888).also { bitmap ->
             val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                shader = LinearGradient(0f, 0f, width.toFloat(), height.toFloat(), start, end, Shader.TileMode.CLAMP)
+                shader = LinearGradient(0f, 0f, width, height, start, end, Shader.TileMode.CLAMP)
             }
             Canvas(bitmap).drawRoundRect(
                 0f,
                 0f,
-                width.toFloat(),
-                height.toFloat(),
+                width,
+                height,
                 24f * density,
                 24f * density,
                 paint,
@@ -439,14 +481,14 @@ class SaldoWidgetProvider : HomeWidgetProvider() {
 
     private fun roundedBitmap(color: Int): Bitmap {
         if (color == cachedSaveColor) cachedSave?.let { return it }
-        return Bitmap.createBitmap(160, 240, Bitmap.Config.ARGB_8888).also { bitmap ->
+        return Bitmap.createBitmap(640, 96, Bitmap.Config.ARGB_8888).also { bitmap ->
             Canvas(bitmap).drawRoundRect(
                 0f,
                 0f,
-                160f,
-                240f,
-                24f,
-                24f,
+                640f,
+                96f,
+                20f,
+                20f,
                 Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color },
             )
             cachedSaveColor = color
@@ -542,6 +584,8 @@ class SaldoWidgetProvider : HomeWidgetProvider() {
         private const val ACTION_PREFIX = "com.noctilune.duitnia.WIDGET_"
         private const val EXTRA_VALUE = "value"
         private const val PAGE_SIZE = 4
+        private val INCOME_COLOR = Color.rgb(67, 217, 122)
+        private val EXPENSE_COLOR = Color.rgb(229, 72, 77)
         private const val ICON_CATEGORY = 0xe148
         private const val ICON_ARROW = 0xe09b
         private val ID_LOCALE = Locale("id", "ID")
@@ -587,6 +631,8 @@ class SaldoWidgetProvider : HomeWidgetProvider() {
             R.id.widget_category_page,
             R.id.widget_type_expense,
             R.id.widget_type_income,
+        )
+        private val KEYPAD_FOREGROUND_IDS = intArrayOf(
             R.id.widget_key_0,
             R.id.widget_key_000,
             R.id.widget_key_1,
@@ -601,6 +647,12 @@ class SaldoWidgetProvider : HomeWidgetProvider() {
             R.id.widget_key_back,
             R.id.widget_key_clear,
         )
+        private val COMPACT_FOREGROUND_IDS = intArrayOf(
+            R.id.widget_bulan_big,
+            R.id.widget_saldo_big,
+            R.id.widget_masuk_label,
+            R.id.widget_keluar_label,
+        )
         private var cachedBackgroundKey = ""
         private var cachedBackground: Bitmap? = null
         private var cachedSaveColor = 0
@@ -611,4 +663,16 @@ class SaldoWidgetProvider : HomeWidgetProvider() {
                 size > 96
         }
     }
+}
+
+/** Varian 3-tile: form penuh tanpa numpad, cuma tombol simpan. */
+class SaldoWidgetMediumProvider : SaldoWidgetProvider() {
+    override val layoutRes: Int get() = R.layout.saldo_widget_medium
+    override val amountPopup: Boolean get() = true
+}
+
+/** Varian 1-tile: ringkasan saldo + masuk/keluar dan tombol tambah. */
+class SaldoWidgetCompactProvider : SaldoWidgetProvider() {
+    override val layoutRes: Int get() = R.layout.saldo_widget_compact
+    override val compact: Boolean get() = true
 }

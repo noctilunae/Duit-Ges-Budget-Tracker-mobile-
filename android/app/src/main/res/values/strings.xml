@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="saldo_widget_desc">Input transaksi cepat dan total saldo Duit Ges</string>
+    <string name="saldo_widget_medium_desc">Duit Ges 3 baris — pilih kategori &amp; dompet lalu isi nominal</string>
+    <string name="saldo_widget_compact_desc">Duit Ges ringkas — saldo, masuk/keluar, dan tombol tambah</string>
 </resources>

@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <style name="WidgetAmountDialogTheme" parent="android:style/Theme.Material.Light.Dialog.Alert">
+        <item name="android:windowSoftInputMode">stateAlwaysVisible</item>
+    </style>
+
     <style name="WidgetCategory">
         <item name="android:layout_width">0dp</item>
         <item name="android:layout_height">match_parent</item>
@@ -20,6 +24,16 @@
         <item name="android:gravity">center</item>
         <item name="android:maxLines">1</item>
         <item name="android:textSize">9sp</item>
+    </style>
+
+    <style name="WidgetCategoryIconMedium">
+        <item name="android:layout_width">28dp</item>
+        <item name="android:layout_height">28dp</item>
+    </style>
+
+    <style name="WidgetCategoryLabelMedium" parent="WidgetCategoryLabel">
+        <item name="android:layout_height">12dp</item>
+        <item name="android:textSize">8sp</item>
     </style>
 
     <style name="WidgetKey">

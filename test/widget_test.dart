@@ -93,7 +93,7 @@ void main() {
     expect(expenseCategories.length, greaterThanOrEqualTo(29));
     expect(incomeCategories.length, greaterThanOrEqualTo(15));
     expect(categoryIconChoices.length, greaterThanOrEqualTo(50));
-    expect(categoryColorChoices.length, 14);
+    expect(categoryColorChoices.length, 21);
   });
 
   test('groupRibuan nyisipin titik tiap 3 digit', () {

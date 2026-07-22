@@ -174,10 +174,11 @@ class _WalletSheetState extends State<_WalletSheet> {
           borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         ),
         padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             Text(
               isEdit ? 'Edit Dompet' : 'Dompet Baru',
               style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
@@ -194,11 +195,21 @@ class _WalletSheetState extends State<_WalletSheet> {
               ),
             ),
             const SizedBox(height: 16),
-            Row(
+            const Text(
+              'Pilih ikon',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            GridView.count(
+              crossAxisCount: 6,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
               children: [
                 for (final entry in walletIcons.entries)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 10),
+                  Tooltip(
+                    message: entry.key.replaceAll('_', ' '),
                     child: InkWell(
                       onTap: () => setState(() => _iconKey = entry.key),
                       borderRadius: BorderRadius.circular(24),
@@ -223,25 +234,36 @@ class _WalletSheetState extends State<_WalletSheet> {
               ],
             ),
             const SizedBox(height: 16),
-            Wrap(
-              spacing: 10,
+            const Text(
+              'Pilih warna',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            GridView.count(
+              crossAxisCount: 7,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
               children: [
                 for (final color in walletColors)
-                  InkWell(
-                    onTap: () => setState(() => _color = color),
-                    borderRadius: BorderRadius.circular(16),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: color,
-                        border: Border.all(
-                          color: _color == color
-                              ? Theme.of(context).colorScheme.onSurface
-                              : Colors.transparent,
-                          width: 2,
+                  Center(
+                    child: InkWell(
+                      onTap: () => setState(() => _color = color),
+                      borderRadius: BorderRadius.circular(18),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: color,
+                          border: Border.all(
+                            color: _color == color
+                                ? Theme.of(context).colorScheme.onSurface
+                                : Colors.transparent,
+                            width: 2,
+                          ),
                         ),
                       ),
                     ),
@@ -293,7 +315,8 @@ class _WalletSheetState extends State<_WalletSheet> {
                 ),
               ],
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );
