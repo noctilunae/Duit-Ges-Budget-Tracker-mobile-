@@ -29,3 +29,7 @@ tmp/
 
 # Personal agent settings
 .claude/settings.local.json
+
+# Internal project notes (README tetap menjadi dokumentasi publik)
+*.md
+!/README.md

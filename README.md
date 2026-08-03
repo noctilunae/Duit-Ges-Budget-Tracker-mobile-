@@ -1,35 +1,67 @@
 # Duit Ges
 
-Aplikasi pencatat keuangan pribadi untuk Android. Semua data disimpan lokal
-di HP; backup dan export tersedia dari menu **Setelan**.
+Duit Ges adalah aplikasi pencatat keuangan pribadi untuk Android. Transaksi,
+budget, target tabungan, utang-piutang, dan pengaturan disimpan lokal di
+perangkat tanpa memerlukan akun atau server.
 
-## Build Android
+## Fitur utama
 
-- Full: `fvm flutter build apk --release --flavor full`
-- Lite: `fvm flutter build apk --release --flavor lite`
+- Catatan pemasukan, pengeluaran, dan transfer antar-dompet.
+- Budget kategori, pembagian gaji, target tabungan, serta utang-piutang.
+- Statistik, pencarian, rekap, ekspor, backup, dan restore data.
+- Widget saldo dan riwayat transaksi di layar utama Android.
+- Tema bawaan: Klasik 1–5, Kucing, Bebek, dan Call Duck.
+- Editor tema untuk warna, background, kartu saldo, serta ikon PNG, JPG, GIF,
+  dan video.
+- Mode gelap, PIN aplikasi, dan mode privasi yang memblokir screenshot.
 
-Full dan Lite memakai application ID serta data aplikasi yang sama. Jalankan
-`scripts/bump_version.sh` sebelum menerbitkan update agar `versionCode` selalu
-lebih tinggi dari APK yang sudah terpasang.
-Lite memuat tema Kucing, Bebek, Call Duck, serta editor Custom penuh dengan
-profil tema bernama dan berikon yang dapat ditambah berkali-kali. OCR dan model
-ML Kit hanya dibundel pada flavor Full.
-Ikon profil custom mendukung PNG/JPG, GIF transparan, dan video terkompresi
-tanpa audio dengan preview 1–5 detik.
-Empat ikon footer juga dapat memakai GIF/video custom per tema dan dikendalikan
-bersama melalui tombol play/stop di bawah tombol tambah transaksi.
+## Flavor aplikasi
 
-Peta dokumentasi untuk memahami struktur, batasan, dan dampak perubahan ada di
-[docs/README.md](docs/README.md).
+| Flavor | Isi |
+| --- | --- |
+| `full` | Seluruh fitur, termasuk pemindaian struk dengan OCR. |
+| `lite` | Fitur keuangan dan tema yang sama tanpa model OCR agar APK lebih kecil. |
 
-## Jalankan saat mengembangkan
+Kedua flavor memakai application ID dan penyimpanan aplikasi yang sama,
+sehingga pengguna dapat memperbarui Full ke Lite atau sebaliknya tanpa
+menghapus data.
+
+## Teknologi
+
+- Flutter dan Dart
+- Android/Kotlin
+- SQLite untuk data utama
+- SharedPreferences untuk pengaturan
+- FVM untuk mengunci versi Flutter proyek
+
+## Menjalankan proyek
 
 ```bash
 fvm flutter pub get
-fvm flutter run
+fvm flutter run --flavor full
 ```
 
-## Siapkan kunci rilis sekali saja
+Pemeriksaan sebelum commit atau rilis:
+
+```bash
+fvm dart format .
+fvm flutter analyze
+fvm flutter test
+fvm flutter test --flavor lite test/lite_flavor_test.dart
+```
+
+## Build APK
+
+```bash
+fvm flutter build apk --release --flavor full
+fvm flutter build apk --release --flavor lite
+```
+
+Hasil build tersedia di `build/app/outputs/flutter-apk/`.
+
+## Penandatanganan rilis
+
+Buat upload key satu kali:
 
 ```bash
 keytool -genkeypair -v -keystore android/app/upload-keystore.jks \
@@ -37,22 +69,26 @@ keytool -genkeypair -v -keystore android/app/upload-keystore.jks \
 cp android/key.properties.example android/key.properties
 ```
 
-Isi password yang tadi dibuat di `android/key.properties`. Simpan kedua file
-itu di tempat aman; tanpa kunci yang sama, versi berikutnya tidak bisa
-memperbarui aplikasi yang sudah terpasang.
+Isi `android/key.properties`, lalu simpan keystore dan password di tempat aman.
+File signing sudah dikecualikan dari Git. Tanpa keystore yang sama, APK baru
+tidak dapat memperbarui instalasi lama.
 
-## Buat APK untuk dibagikan
+Sebelum menerbitkan pembaruan, naikkan `version` di `pubspec.yaml` atau gunakan
+`scripts/bump_version.sh`. Nilai build number harus selalu lebih tinggi dari
+versi yang sudah terpasang.
 
-```bash
-fvm flutter test
-fvm flutter analyze
-fvm flutter build apk --release --split-per-abi
+## Struktur ringkas
+
+```text
+lib/                  kode aplikasi Flutter
+assets/theme/         aset seluruh tema
+android/              integrasi native dan konfigurasi Android
+test/                 unit, widget, serta pengujian flavor
+scripts/              utilitas pengembangan dan rilis
 ```
 
-Kebanyakan HP modern memakai file
-`build/app/outputs/flutter-apk/app-arm64-v8a-full-release.apk`. Kirim lewat
-WhatsApp, Google Drive, atau kabel data. Penerima membuka file tersebut lalu
-mengizinkan instalasi dari sumber yang dipakai saat Android memintanya.
+## Privasi data
 
-Setiap pembaruan perlu menaikkan `version` di `pubspec.yaml`, misalnya dari
-`1.0.5+4007` menjadi `1.0.6+4008`.
+Data utama tetap berada di perangkat. Aplikasi tidak menyediakan sinkronisasi
+cloud otomatis; pengguna mengendalikan sendiri file ekspor dan backup dari
+menu Setelan.
