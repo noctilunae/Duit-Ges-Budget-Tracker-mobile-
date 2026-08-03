@@ -32,3 +32,4 @@ tmp/
 
 # Dokumentasi Markdown lokal
 *.md
+!/README.md
