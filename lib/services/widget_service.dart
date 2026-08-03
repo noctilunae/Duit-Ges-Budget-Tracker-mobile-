@@ -38,7 +38,9 @@ class WidgetService {
       final summary = await db.widgetSummary(start, end);
 
       // Hormati mode sembunyiin saldo
-      final hide = prefs.getBool('hideBalance') ?? false;
+      final hide =
+          (prefs.getBool('hideBalance') ?? false) ||
+          (prefs.getBool('hideWidgetBalance') ?? false);
       String fmt(double value) => hide ? 'Rp ••••' : rupiah(value);
 
       String hex(int color) =>

@@ -10,7 +10,9 @@ import '../providers/transaction_provider.dart';
 import '../providers/wallet_provider.dart';
 import '../utils/app_style.dart';
 import '../utils/formatters.dart';
+import '../utils/stored_icon.dart';
 import '../widgets/theme_artwork.dart';
+import '../widgets/custom_image_icon_picker.dart';
 import '../widgets/month_selector.dart';
 import '../widgets/transaction_detail_sheet.dart';
 
@@ -36,7 +38,7 @@ class GoalsView extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 32),
                   child: Column(
                     children: [
-                      const ThemeArtwork(tile: 11, size: 88),
+                      const ThemeArtwork(tile: 7, size: 88, headerIndex: 1),
                       const SizedBox(height: 10),
                       Text(
                         'Belum ada target nabung.\n'
@@ -453,14 +455,26 @@ Future<void> _showGoalSheetOnce(BuildContext context, {Goal? existing}) {
                   ),
                 ),
                 const SizedBox(height: 16),
-                SegmentedButton<bool>(
+                SegmentedButton<String>(
                   segments: const [
-                    ButtonSegment(value: false, label: Text('Ikon warna')),
-                    ButtonSegment(value: true, label: Text('Emoji')),
+                    ButtonSegment(value: 'icon', label: Text('Ikon')),
+                    ButtonSegment(value: 'emoji', label: Text('Emoji')),
+                    ButtonSegment(value: 'image', label: Text('PNG/JPG')),
                   ],
-                  selected: {iconKey.startsWith('emoji:')},
+                  selected: {
+                    iconKey.startsWith('emoji:')
+                        ? 'emoji'
+                        : iconKey.startsWith('image:')
+                        ? 'image'
+                        : 'icon',
+                  },
                   onSelectionChanged: (value) => setSheetState(
-                    () => iconKey = value.first ? 'emoji:' : 'savings',
+                    () => iconKey = switch (value.first) {
+                      'emoji' => 'emoji:',
+                      'image' =>
+                        iconKey.startsWith('image:') ? iconKey : 'image:',
+                      _ => 'savings',
+                    },
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -473,6 +487,12 @@ Future<void> _showGoalSheetOnce(BuildContext context, {Goal? existing}) {
                       labelText: 'Emoji target',
                       hintText: '🎯',
                     ),
+                  )
+                else if (iconKey.startsWith('image:'))
+                  CustomImageIconPicker(
+                    iconKey: iconKey,
+                    fallbackKey: 'savings',
+                    onChanged: (value) => setSheetState(() => iconKey = value),
                   )
                 else
                   GridView.count(
@@ -506,9 +526,12 @@ Future<void> _showGoalSheetOnce(BuildContext context, {Goal? existing}) {
                     ],
                   ),
                 const SizedBox(height: 16),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
+                GridView.count(
+                  crossAxisCount: 7,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
                   children: [
                     for (final c in categoryColorChoices)
                       InkWell(
@@ -571,6 +594,8 @@ Future<void> _showGoalSheetOnce(BuildContext context, {Goal? existing}) {
                           final emoji = emojiController.text.trim();
                           if (name.isEmpty ||
                               target <= 0 ||
+                              (iconKey.startsWith('image:') &&
+                                  !isValidStoredImageIcon(iconKey)) ||
                               (iconKey.startsWith('emoji:') && emoji.isEmpty)) {
                             return;
                           }

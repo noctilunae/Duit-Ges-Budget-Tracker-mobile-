@@ -3,8 +3,24 @@
 Aplikasi pencatat keuangan pribadi untuk Android. Semua data disimpan lokal
 di HP; backup dan export tersedia dari menu **Setelan**.
 
-Dokumentasi teknis dan konteks produk lengkap untuk pengembang/agent ada di
-[PROJECT_CONTEXT.md](PROJECT_CONTEXT.md).
+## Build Android
+
+- Full: `fvm flutter build apk --release --flavor full`
+- Lite: `fvm flutter build apk --release --flavor lite`
+
+Full dan Lite memakai application ID serta data aplikasi yang sama. Jalankan
+`scripts/bump_version.sh` sebelum menerbitkan update agar `versionCode` selalu
+lebih tinggi dari APK yang sudah terpasang.
+Lite memuat tema Kucing, Bebek, Call Duck, serta editor Custom penuh dengan
+profil tema bernama dan berikon yang dapat ditambah berkali-kali. OCR dan model
+ML Kit hanya dibundel pada flavor Full.
+Ikon profil custom mendukung PNG/JPG, GIF transparan, dan video terkompresi
+tanpa audio dengan preview 1–5 detik.
+Empat ikon footer juga dapat memakai GIF/video custom per tema dan dikendalikan
+bersama melalui tombol play/stop di bawah tombol tambah transaksi.
+
+Peta dokumentasi untuk memahami struktur, batasan, dan dampak perubahan ada di
+[docs/README.md](docs/README.md).
 
 ## Jalankan saat mengembangkan
 
@@ -17,7 +33,7 @@ fvm flutter run
 
 ```bash
 keytool -genkeypair -v -keystore android/app/upload-keystore.jks \
-  -keyalg RSA -keysize 2048 -validity 10000 -alias duit-nia
+  -keyalg RSA -keysize 2048 -validity 10000 -alias duitges
 cp android/key.properties.example android/key.properties
 ```
 
@@ -34,15 +50,9 @@ fvm flutter build apk --release --split-per-abi
 ```
 
 Kebanyakan HP modern memakai file
-`build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`. Kirim lewat
+`build/app/outputs/flutter-apk/app-arm64-v8a-full-release.apk`. Kirim lewat
 WhatsApp, Google Drive, atau kabel data. Penerima membuka file tersebut lalu
 mengizinkan instalasi dari sumber yang dipakai saat Android memintanya.
-
-Untuk Google Play, buat Android App Bundle:
-
-```bash
-fvm flutter build appbundle --release
-```
 
 Setiap pembaruan perlu menaikkan `version` di `pubspec.yaml`, misalnya dari
 `1.0.5+4007` menjadi `1.0.6+4008`.

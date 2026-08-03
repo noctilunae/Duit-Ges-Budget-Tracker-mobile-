@@ -10,7 +10,7 @@ Terakhir diperbarui: **22 Juli 2026**. Audit penuh terakhir: 21 Juli 2026.
 
 - Nama produk dan label launcher: **Duit Ges**.
 - Package Dart: `duit_ges`.
-- Android application ID/namespace tetap `com.noctilune.duitnia`. Jangan ganti
+- Android application ID/namespace tetap `com.noctilune.duitges`. Jangan ganti
   tanpa rencana migrasi karena Android akan menganggapnya aplikasi berbeda.
 - Versi saat audit: `1.0.5+4007`.
 - Target platform: Android. Tidak ada implementasi iOS/web/desktop produksi.
@@ -103,7 +103,7 @@ dan `DatabaseHelper + Provider` adalah jalur paling sederhana saat ini.
 
 Database: `duit_ges.db`, dikelola oleh `sqflite`.
 
-`DatabaseHelper.schemaVersion` saat ini **13**. Aturan mutlak ketika mengubah
+`DatabaseHelper.schemaVersion` saat ini **15**. Aturan mutlak ketika mengubah
 skema:
 
 1. Naikkan `schemaVersion`.
@@ -130,8 +130,8 @@ Semua nominal database sejak v8 adalah integer rupiah. Model/UI masih memakai
 
 Index transaksi yang tersedia:
 
-- `idx_tx_date`
-- `idx_tx_wallet`
+- `idx_tx_date_id`
+- `idx_tx_wallet_date_id`
 - `idx_tx_category`
 
 ### Invariant penting
@@ -237,11 +237,22 @@ utang, preferensi, atau struk.
   transaksi, dan versi schema. Database lama disimpan sementara agar kegagalan
   dapat dipulihkan.
 - Auto-backup berjalan paling cepat setiap 7 hari dan mempertahankan 4 backup.
-- Foto struk dapat diambil dari kamera/galeri. OCR lokal memakai Google ML Kit
-  text recognition untuk menebak total; hasil tetap harus dikonfirmasi user.
+- Foto struk dapat diambil dari kamera/galeri. Pada Full, OCR lokal memakai
+  Google ML Kit melalui channel native `duit_ges/receipt_ocr` untuk menebak
+  total; hasil tetap harus dikonfirmasi user. Dependency ML Kit memakai
+  `fullImplementation`, sehingga kode dan modelnya tidak masuk ke APK Lite.
 - Kategori custom dan dompet dapat memakai ikon Material berwarna atau emoji
   full-color dari keyboard HP. Emoji disimpan di kolom `icon` dengan prefix
   `emoji:` dan ikut disinkronkan ke pilihan pada widget Android.
+- Kategori, dompet, budget, target, dan template pembagian gaji juga menerima
+  ikon PNG/JPG dari galeri. Pengguna mengatur crop kotak 1:1 lewat preview
+  lingkaran sempurna dengan pan/zoom; hasil disimpan sebagai PNG 160×160
+  dengan sudut transparan sehingga visual akhirnya benar-benar bulat di
+  `custom_icons`. Metadata tetap memakai kolom `icon` lama dengan format aditif
+  `image:<skala>:<path>`. Crop dapat diedit ulang dan skala tampilan 60–250%
+  dapat disesuaikan. Ikon aktif ikut backup/restore; file tanpa referensi
+  dibersihkan setelah data disimpan. Jangan mengganti prefix atau format ini
+  tanpa fallback.
 - `android:allowBackup="false"` mencegah backup Android otomatis.
 - Mode privasi memanggil channel native `duit_ges/privacy` untuk memasang
   `FLAG_SECURE`. Fitur ini memblokir screenshot/screen recording dan preview
@@ -254,8 +265,8 @@ utang, preferensi, atau struk.
 ## 8. Integrasi Android
 
 - Label launcher: `Duit Ges` di `AndroidManifest.xml`.
-- Namespace/application ID: `com.noctilune.duitnia`; source Kotlin berada di
-  `android/app/src/main/kotlin/com/noctilune/duitnia/` agar path dan package
+- Namespace/application ID: `com.noctilune.duitges`; source Kotlin berada di
+  `android/app/src/main/kotlin/com/noctilune/duitges/` agar path dan package
   tidak berbeda.
 - Toolchain Android memakai Java/Kotlin 17. Nilai compile/target/min SDK
   mengikuti versi yang disediakan Flutter di Gradle.
@@ -309,7 +320,7 @@ Preset saat ini, sesuai urutan picker:
 10. `jjk2` / label JJK 2
 11. `matcha`
 
-Font lokal: Jakarta Sans, Fredoka, Baloo 2, Quicksand.
+Font lokal: Jakarta Sans, Fredoka, Baloo 2, Quicksand, Mali, Chewy.
 
 Gaya kartu saldo: Gradient, Neon, Glass, Minimal, dua video JJK, empat video
 Frieren Rial (135–138), dan Call Duck. Video Frieren Rial hanya tersedia serta dipilih otomatis
@@ -331,6 +342,50 @@ Footer Frieren Rial memakai PNG statis `footer_transaksi`, `footer_budget`,
 `footer_statistik`, dan `footer_setelan`; kartu saldo memakai video eksklusif,
 kontrol nominal memakai `visibility.png`, dan FAB memakai `add_transaction.gif`
 dengan badge plus tone halaman di kanan atas.
+Kartu saldo dan background menerima koleksi template custom gambar/video tanpa
+batas jumlah aplikasi. Video input dibatasi 15 detik, Full HD, dan 50 MB.
+Video ringan (maksimal 720p dan 5 MB untuk kartu atau 10 MB untuk background)
+dapat disimpan tanpa kompresi; lainnya ditranscode Media3 ke MP4 H.264 720p
+tanpa audio. Semua media harus melewati preview sebelum disimpan. Menghapus
+template aktif mengembalikan tampilan ke template bawaan tanpa mengubah data.
+Crop template memakai zoom dan posisi non-destruktif (kartu 2:1, background
+9:16), berlaku untuk gambar maupun video, serta dapat diedit kembali tanpa
+encode ulang. Data template versi lama tetap valid dengan crop tengah 1x.
+Template kartu juga menyimpan opacity 10–100% dan menampilkannya langsung
+pada preview; template lama tetap memakai opacity 100%.
+Semua tema memakai override `themeCustomizations` yang sama untuk warna empat
+halaman, seluruh kelompok artwork, dan posisi badge `+` FAB. Override disimpan
+per ID tema; jika belum ada, rendering memakai konfigurasi bawaan lama tanpa
+perubahan. Reset hanya menghapus override tema aktif, bukan data transaksi.
+Flavor Lite hanya memuat tema Kucing, Bebek, dan Call Duck. ID tema Full dari
+instalasi lama difallback aman ke Kucing pada Lite.
+Tema custom dapat ditambah tanpa batas tetap. Setiap profil mempunyai ID
+stabil, nama maksimal 30 karakter, ikon PNG/JPG sendiri, serta konfigurasi
+override yang terpisah. Profil `custom` lama dimigrasikan sebagai profil
+pertama; menghapus profil aktif kembali ke tema bawaan pertama tanpa menyentuh
+transaksi atau koleksi template media.
+Ikon profil juga menerima GIF dan video. GIF dibatasi 8 MB, 10 detik,
+1080×1080, 120 frame, serta budget 24 juta pixel-frame; video dibatasi 50 MB,
+10 detik, dan Full HD. Kompresi mengecilkan sisi target ke 160 px, video dibuat
+tanpa audio, dan opsi tanpa kompresi hanya aktif untuk file ringan. Durasi
+preview dapat dipilih 1–5 detik. GIF mempertahankan transparansi dan memakai
+PNG frame pertama setelah preview berhenti; hanya tema aktif yang dianimasikan
+di carousel agar banyak profil tidak membuka banyak decoder sekaligus.
+Semua slot ikon tema memakai picker PNG/JPG/GIF/video dan preview crop bulat
+160×160 yang sama. Crop animasi disimpan non-destruktif sebagai zoom dan
+alignment di key media; key GIF/video lama tetap dibaca sebagai crop tengah 1x.
+Konfigurasi baru hanya mempunyai 4 header, 4 footer, maskot kartu saldo, dan
+tombol tambah transaksi. Ilustrasi konten tidak mempunyai slot sendiri dan
+mengikuti header halaman. Map `artwork` serta `footerArtwork` lama tetap dibaca
+sebagai fallback; slot baru disimpan aditif pada `ThemeCustomization.icons`.
+Empat slot footer custom disimpan terpisah dalam
+`ThemeCustomization.footerArtwork`, sehingga tidak berbenturan dengan nomor
+tile header/artwork lama. Slot menerima GIF atau video yang melewati batas dan
+opsi kompresi yang sama. Media diam secara default, lalu seluruh slot tema aktif
+diputar/dihentikan lewat satu tombol di bawah FAB. Video tetap mute dan memakai
+`mixWithOthers` agar tidak mengambil audio focus aplikasi lain. Kelompok
+kustomisasi utama pada Setelan memakai header `ExpansionTile` agar halaman
+mudah dipindai dan di-scroll.
 Tema Frieren dan Frieren Rial mempunyai panah di samping judul Dompet untuk
 slide-collapse strip dompet tanpa menghapus data atau memengaruhi tema lain.
 Mode privasi memakai channel native `duit_ges/privacy` dan Android
@@ -362,6 +417,8 @@ Nomor tile adalah API internal dan jangan ditukar sembarangan:
 `tileGifs` dapat menimpa tile tertentu. `footerGifManualControl` membuat footer
 memakai PNG statis sampai tombol play di bawah FAB ditekan. GIF diberi
 `RepaintBoundary`; PNG statis memiliki fallback khusus di `ThemeArtwork`.
+Override custom footer tidak memakai nomor tile ini; indeks stabilnya adalah
+0 Transaksi, 1 Budget, 2 Statistik, dan 3 Setelan.
 
 ### Keputusan visual yang harus dipertahankan
 
@@ -390,6 +447,9 @@ Ketika menambah/mengganti asset:
 `SettingsProvider` memakai `SharedPreferences`. Key penting mencakup:
 
 - `themeId`, `themeTone_<themeId>`, `accent`, `darkMode`
+- `customTemplates`, `customCardIdsByTheme`, `customBackgroundIdsByTheme`
+- `themeCustomizations`
+- `customThemeProfiles`
 - `cardStyle`, `font`, `monthStartDay`, `trendMonths`
 - `hideBalance`, `hideWallets`, `privacyMode`
 - `frierenRialBackground`
@@ -406,7 +466,8 @@ kehilangan konfigurasi.
 - Format/chart: `intl`, `fl_chart`.
 - Preferensi/keamanan lokal: `shared_preferences`, `crypto`.
 - Data portabel: `excel`, `archive`, `share_plus`, `file_selector`.
-- Media: `image_picker`, `google_mlkit_text_recognition`, `video_player`.
+- Media: `image_picker`, `video_player`; ML Kit OCR adalah dependency Android
+  khusus flavor Full.
 - Android: `flutter_local_notifications`, `timezone`, `flutter_timezone`,
   `home_widget`.
 
@@ -493,7 +554,7 @@ analyzer, test, dan build. Hasil terpenting:
   `icon_fg.png`, `icon_pg.png`, `placeholder.png`, dan `placeholderan.png`.
   `assets/icon/icon.png` tetap menjadi satu-satunya sumber launcher icon.
 - Lokasi source Kotlin dipindahkan dari path package lama
-  `com/example/duit_ges` ke `com/noctilune/duitnia`; deklarasi package dan
+  `com/example/duit_ges` ke `com/noctilune/duitges`; deklarasi package dan
   perilaku runtime tidak berubah.
 - Semua dependency langsung di `pubspec.yaml` mempunyai import aktif. Tidak ada
   package yang aman dihapus hanya berdasarkan audit statis.
@@ -517,13 +578,14 @@ Perbaikan runtime dari audit sebelumnya yang tetap berlaku:
 - Menambah test regresi untuk agregasi rekap/widget dan guard recurring.
 
 Setelah pembersihan, repository melacak sekitar **277 file sumber**. Folder aset
-berisi 162 file dengan ukuran sekitar **37,4 MB**. Kontributor terbesar adalah
-ML Kit OCR di binary native serta video/GIF aktif milik JJK 2, Frieren, Frieren
-Rial, dan Call Duck. Media tidak dikompres secara buta karena perubahan codec,
-alpha, frame rate, atau warna harus dibandingkan di perangkat fisik.
+berisi 162 file dengan ukuran sekitar **37,4 MB**. Kontributor terbesar pada
+Full adalah ML Kit OCR di binary native serta video/GIF aktif milik JJK 2,
+Frieren, Frieren Rial, dan Call Duck. Media tidak dikompres secara buta karena
+perubahan codec, alpha, frame rate, atau warna harus dibandingkan di perangkat
+fisik.
 
-Baseline APK release arm64-v8a terakhir sekitar **72 MB**. APK debug/universal
-lebih besar dan tidak boleh dipakai sebagai ukuran distribusi.
+APK universal release terakhir sekitar **131,3 MB** untuk Full dan **70,4 MB**
+untuk Lite. APK per-ABI/AAB distribusi akan lebih kecil.
 
 ### Kebersihan Git
 
@@ -566,6 +628,6 @@ Known limitations yang jangan disembunyikan:
 - Riwayat Git lama masih membawa blob hasil build sampai dilakukan rewrite
   history terencana.
 - Build Flutter 3.44.6 masih berhasil, tetapi mengeluarkan warning bahwa plugin
-  `flutter_timezone`, `google_mlkit_*`, dan `home_widget` masih menerapkan Kotlin
-  Gradle Plugin sendiri. Sebelum upgrade Flutter berikutnya, cek versi plugin
-  yang mendukung Built-in Kotlin dan uji build Android kembali.
+  `flutter_timezone` dan `home_widget` masih menerapkan Kotlin Gradle Plugin
+  sendiri. Sebelum upgrade Flutter berikutnya, cek versi plugin yang mendukung
+  Built-in Kotlin dan uji build Android kembali.

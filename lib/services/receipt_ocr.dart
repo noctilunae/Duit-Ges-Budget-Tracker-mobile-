@@ -1,19 +1,39 @@
 import 'package:flutter/foundation.dart' show debugPrint, visibleForTesting;
-import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'package:flutter/services.dart';
+
+class ReceiptOcrLine {
+  const ReceiptOcrLine({required this.text, required this.boundingBox});
+
+  final String text;
+  final Rect boundingBox;
+}
 
 /// Baca foto struk pake ML Kit (on-device, full offline) dan tebak
 /// nominal totalnya dari teks yang kebaca.
 class ReceiptOcr {
   ReceiptOcr._();
+  static const _channel = MethodChannel('duit_ges/receipt_ocr');
 
   /// Scan struk → nominal total. Null kalau ga nemu / gagal baca.
   static Future<double?> scanTotal(String imagePath) async {
-    final recognizer = TextRecognizer(script: TextRecognitionScript.latin);
     try {
-      final recognized = await recognizer.processImage(
-        InputImage.fromFilePath(imagePath),
-      );
-      final allLines = [for (final block in recognized.blocks) ...block.lines];
+      final raw = await _channel.invokeListMethod<Object?>('scan', {
+        'path': imagePath,
+      });
+      if (raw == null) return null;
+      final allLines = [
+        for (final item in raw)
+          if (item case final Map<Object?, Object?> map)
+            ReceiptOcrLine(
+              text: '${map['text'] ?? ''}',
+              boundingBox: Rect.fromLTWH(
+                (map['left'] as num).toDouble(),
+                (map['top'] as num).toDouble(),
+                (map['width'] as num).toDouble(),
+                (map['height'] as num).toDouble(),
+              ),
+            ),
+      ];
       // Struk biasanya 2 kolom (label kiri, angka kanan) — urutan mentah
       // dari ML Kit ga selalu ngikutin baris fisik struk, makanya
       // disusun ulang pake posisi Y (tinggi) tiap baris di foto dulu.
@@ -27,8 +47,6 @@ class ReceiptOcr {
     } catch (e, st) {
       debugPrint('[ReceiptOcr] GAGAL scan: $e\n$st');
       return null;
-    } finally {
-      await recognizer.close();
     }
   }
 
@@ -37,12 +55,12 @@ class ReceiptOcr {
   /// baris disusun kiri ke kanan — biar label & angkanya nyambung
   /// walau ML Kit ngasihnya dalam blok terpisah.
   @visibleForTesting
-  static List<String> reconstructRows(List<TextLine> lines) {
+  static List<String> reconstructRows(List<ReceiptOcrLine> lines) {
     if (lines.isEmpty) return [];
     final sorted = [...lines]
       ..sort((a, b) => a.boundingBox.top.compareTo(b.boundingBox.top));
 
-    final rows = <List<TextLine>>[];
+    final rows = <List<ReceiptOcrLine>>[];
     for (final line in sorted) {
       final centerY = line.boundingBox.top + line.boundingBox.height / 2;
       final lastRow = rows.isEmpty ? null : rows.last;

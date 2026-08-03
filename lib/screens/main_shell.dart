@@ -7,6 +7,8 @@ import '../services/auto_backup_service.dart';
 import '../services/reminder_service.dart';
 import '../widgets/animated_widgets.dart';
 import '../widgets/theme_artwork.dart';
+import '../widgets/theme_icon_view.dart';
+import '../widgets/custom_template_view.dart';
 import 'add_transaction_screen.dart';
 import 'budget_screen.dart';
 import 'home_screen.dart';
@@ -76,13 +78,16 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
     final backgroundAsset = isFrierenRial
         ? settings.frierenRialBackground.asset
         : null;
+    final customBackground = settings.customBackground;
     final footerColor = pageBackground.last;
     final idleFabAsset = switch (settings.preset.id) {
       'jjk2' => 'assets/theme/jjk2/add_transaction_idle.gif',
       'call_duck' => 'assets/theme/call_duck/add_transaction_static.png',
       _ => null,
     };
-    final fabAsset = idleFabAsset != null && !_footerGifsPlaying
+    final fabAsset = settings.addTransactionArtwork != null
+        ? null
+        : idleFabAsset != null && !_footerGifsPlaying
         ? idleFabAsset
         : settings.preset.fabGif;
     final fabImageSize = switch (settings.preset.id) {
@@ -96,15 +101,17 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeOutCubic,
         decoration: BoxDecoration(
-          color: backgroundAsset == null ? null : Colors.black,
-          gradient: backgroundAsset == null
+          color: customBackground != null || backgroundAsset != null
+              ? Colors.black
+              : null,
+          gradient: customBackground == null && backgroundAsset == null
               ? LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: pageBackground,
                 )
               : null,
-          image: backgroundAsset == null
+          image: customBackground != null || backgroundAsset == null
               ? null
               : DecorationImage(
                   image: AssetImage(backgroundAsset),
@@ -114,6 +121,10 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
         ),
         child: Stack(
           children: [
+            if (customBackground != null)
+              Positioned.fill(
+                child: CustomTemplateView(template: customBackground),
+              ),
             if (backgroundAsset != null)
               Positioned.fill(
                 child: IgnorePointer(
@@ -188,18 +199,21 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
                   ),
                 )
               else
-                const ThemeArtwork(tile: 0, size: 48),
+                const ThemeArtwork(tile: 0, size: 48, addTransaction: true),
               Positioned(
                 right: isFrierenRial ? 5 : 1,
                 top: isFrierenRial ? 5 : null,
                 bottom: isFrierenRial ? null : 1,
-                child: Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    color: settings.accent,
-                    shape: BoxShape.circle,
+                child: Transform.translate(
+                  offset: settings.fabPlusOffset,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: settings.accent,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.add, size: 16),
                   ),
-                  child: const Icon(Icons.add, size: 16),
                 ),
               ),
             ],
@@ -229,6 +243,7 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
               child: Row(
                 children: [
                   _NavItem(
+                    navIndex: 0,
                     icon: Icons.receipt_long,
                     artworkTile: settings.preset.id == 'frieren'
                         ? 2
@@ -242,6 +257,7 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
                     onTap: () => _selectTab(0),
                   ),
                   _NavItem(
+                    navIndex: 1,
                     icon: Icons.savings_outlined,
                     artworkTile:
                         const {
@@ -259,6 +275,7 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
                   ),
                   const SizedBox(width: 72),
                   _NavItem(
+                    navIndex: 2,
                     icon: Icons.pie_chart,
                     artworkTile:
                         const {
@@ -275,6 +292,7 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
                     onTap: () => _selectTab(2),
                   ),
                   _NavItem(
+                    navIndex: 3,
                     icon: Icons.tune,
                     artworkTile: settings.preset.id == 'frieren'
                         ? 12
@@ -294,7 +312,8 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
               ),
             ),
           ),
-          if (settings.preset.footerGifManualControl)
+          if (settings.preset.footerGifManualControl ||
+              settings.hasAnimatedCustomFooter)
             Positioned(
               top: 34,
               left: 0,
@@ -337,6 +356,7 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
 }
 
 class _NavItem extends StatelessWidget {
+  final int navIndex;
   final IconData icon;
   final int artworkTile;
   final String? gifAsset;
@@ -346,6 +366,7 @@ class _NavItem extends StatelessWidget {
   final VoidCallback onTap;
 
   const _NavItem({
+    required this.navIndex,
     required this.icon,
     required this.artworkTile,
     this.gifAsset,
@@ -360,11 +381,14 @@ class _NavItem extends StatelessWidget {
     final theme = Theme.of(context).colorScheme;
     final color = selected ? theme.primary : theme.onSurfaceVariant;
     final settings = context.watch<SettingsProvider>();
+    final customFooterKey = settings.footerArtwork(navIndex);
     // Icon GIF dikasih ukuran lebih gede dari PNG statis (26px) — detail
     // animasinya baru kebaca jelas kalau agak besar dikit, 26px kekecilan.
-    final resolvedGif = gifAsset ?? settings.preset.tileGifs[artworkTile];
-    final isGif = resolvedGif != null;
-    final iconSize = isGif ? 40.0 : 26.0;
+    final resolvedGif = customFooterKey == null
+        ? gifAsset ?? settings.preset.tileGifs[artworkTile]
+        : null;
+    final isAnimated = customFooterKey != null || resolvedGif != null;
+    final iconSize = isAnimated ? 36.0 : 26.0;
     // Tema footerGifManualControl: PNG statis sampai tombol play di bawah
     // FAB dipencet, lalu semua footer beralih ke GIF.
     final manualControl = settings.preset.footerGifManualControl;
@@ -402,7 +426,18 @@ class _NavItem extends StatelessWidget {
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: displayPath != null
+                  child: customFooterKey != null
+                      ? RepaintBoundary(
+                          child: ThemeIconView(
+                            iconKey: customFooterKey,
+                            size: iconSize,
+                            previewSeconds: 3,
+                            animate: footerGifsPlaying,
+                            continuous: true,
+                            fallback: Icon(icon, color: color, size: 22),
+                          ),
+                        )
+                      : displayPath != null
                       ? RepaintBoundary(
                           child: ClipRect(
                             child: Transform.scale(
@@ -424,6 +459,7 @@ class _NavItem extends StatelessWidget {
                       : ThemeArtwork(
                           tile: artworkTile,
                           size: iconSize,
+                          ignoreCustomization: true,
                           fallback: Icon(icon, color: color, size: 22),
                         ),
                 ),

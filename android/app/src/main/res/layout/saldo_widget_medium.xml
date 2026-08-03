@@ -19,7 +19,8 @@
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="16dp"
+            android:layout_height="0dp"
+            android:layout_weight="16"
             android:layout_marginHorizontal="10dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
@@ -54,7 +55,8 @@
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="28dp"
+            android:layout_height="0dp"
+            android:layout_weight="28"
             android:layout_marginTop="3dp"
             android:background="@drawable/widget_panel_bg"
             android:orientation="horizontal"
@@ -85,7 +87,8 @@
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="10dp"
+            android:layout_height="0dp"
+            android:layout_weight="10"
             android:layout_marginHorizontal="10dp"
             android:layout_marginTop="2dp"
             android:gravity="center_vertical"
@@ -110,7 +113,8 @@
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="40dp"
+            android:layout_height="0dp"
+            android:layout_weight="40"
             android:layout_marginTop="1dp"
             android:gravity="center"
             android:orientation="horizontal"
@@ -151,7 +155,8 @@
         <LinearLayout
             android:id="@+id/widget_nominal"
             android:layout_width="match_parent"
-            android:layout_height="34dp"
+            android:layout_height="0dp"
+            android:layout_weight="34"
             android:layout_marginTop="3dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
@@ -226,7 +231,7 @@
             android:layout_marginHorizontal="2dp"
             android:layout_marginTop="3dp"
             android:layout_marginBottom="2dp"
-            android:layout_weight="1">
+            android:layout_weight="30">
 
             <ImageView
                 android:id="@+id/widget_save_background"

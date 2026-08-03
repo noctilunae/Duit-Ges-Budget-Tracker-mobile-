@@ -1,15 +1,23 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
 class LoopingAssetVideo extends StatefulWidget {
-  final String asset;
+  final String? asset;
+  final String? filePath;
   final int quarterTurns;
+  final Alignment alignment;
+  final double scale;
 
   const LoopingAssetVideo({
     super.key,
-    required this.asset,
+    this.asset,
+    this.filePath,
     this.quarterTurns = 0,
-  });
+    this.alignment = Alignment.center,
+    this.scale = 1,
+  }) : assert((asset == null) != (filePath == null));
 
   @override
   State<LoopingAssetVideo> createState() => _LoopingAssetVideoState();
@@ -22,7 +30,16 @@ class _LoopingAssetVideoState extends State<LoopingAssetVideo> {
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.asset(widget.asset);
+    final options = VideoPlayerOptions(mixWithOthers: true);
+    _controller = widget.filePath == null
+        ? VideoPlayerController.asset(
+            widget.asset!,
+            videoPlayerOptions: options,
+          )
+        : VideoPlayerController.file(
+            File(widget.filePath!),
+            videoPlayerOptions: options,
+          );
     _start();
   }
 
@@ -62,14 +79,21 @@ class _LoopingAssetVideoState extends State<LoopingAssetVideo> {
     if (!_controller.value.isInitialized) return const SizedBox.expand();
     final size = _controller.value.size;
     return SizedBox.expand(
-      child: FittedBox(
-        fit: BoxFit.cover,
-        child: RotatedBox(
-          quarterTurns: widget.quarterTurns,
-          child: SizedBox(
-            width: size.width,
-            height: size.height,
-            child: VideoPlayer(_controller),
+      child: ClipRect(
+        child: Transform.scale(
+          scale: widget.scale,
+          alignment: widget.alignment,
+          child: FittedBox(
+            fit: BoxFit.cover,
+            alignment: widget.alignment,
+            child: RotatedBox(
+              quarterTurns: widget.quarterTurns,
+              child: SizedBox(
+                width: size.width,
+                height: size.height,
+                child: VideoPlayer(_controller),
+              ),
+            ),
           ),
         ),
       ),

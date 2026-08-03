@@ -1,10 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../db/database_helper.dart';
 import '../models/category.dart';
 import '../models/transaction.dart';
+import '../providers/category_provider.dart';
 import '../utils/app_style.dart';
 import '../utils/formatters.dart';
 import '../widgets/transaction_detail_sheet.dart';
@@ -81,11 +83,7 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Future<void> _pickCategory() async {
-    final all = [
-      ...expenseCategories,
-      ...incomeCategories,
-      ...customCategoryRegistry.values,
-    ];
+    final all = context.read<CategoryProvider>().all;
     final picked = await showModalBottomSheet<Category>(
       context: context,
       useSafeArea: true,

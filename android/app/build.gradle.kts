@@ -11,11 +11,20 @@ val keystorePropertiesFile = rootProject.file("key.properties")
 if (keystorePropertiesFile.exists()) {
     keystorePropertiesFile.inputStream().use(keystoreProperties::load)
 }
+val isReleaseBuild = gradle.startParameter.taskNames.any {
+    it.contains("release", ignoreCase = true)
+}
+require(!isReleaseBuild || keystorePropertiesFile.exists()) {
+    "Release build membutuhkan android/key.properties"
+}
 
 android {
-    namespace = "com.noctilune.duitnia"
+    namespace = "com.noctilune.duitges"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
+    buildFeatures {
+        buildConfig = true
+    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -25,13 +34,24 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.noctilune.duitnia"
+        applicationId = "com.noctilune.duitges"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+    }
+
+    flavorDimensions += "edition"
+    productFlavors {
+        create("full") {
+            dimension = "edition"
+        }
+        create("lite") {
+            dimension = "edition"
+            versionNameSuffix = "-lite"
+        }
     }
 
     signingConfigs {
@@ -47,9 +67,7 @@ android {
 
     buildTypes {
         release {
-            // Tetap bisa dites lokal sebelum keystore produksi dibuat.
             signingConfig = signingConfigs.findByName("release")
-                ?: signingConfigs.getByName("debug")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -68,6 +86,8 @@ kotlin {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
+    implementation("androidx.media3:media3-transformer:1.9.2")
+    "fullImplementation"("com.google.mlkit:text-recognition:16.0.1")
 }
 
 flutter {

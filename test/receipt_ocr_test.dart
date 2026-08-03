@@ -2,27 +2,18 @@ import 'dart:math';
 import 'dart:ui';
 
 import 'package:duit_ges/services/receipt_ocr.dart';
-import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Bikin TextLine sintetis dengan posisi (x, y, lebar, tinggi) tertentu
 /// — biar reconstructRows bisa diuji tanpa perlu kamera/HP beneran.
-TextLine _line(
+ReceiptOcrLine _line(
   String text, {
   required double x,
   required double y,
   double w = 100,
   double h = 30,
 }) {
-  return TextLine(
-    text: text,
-    elements: const [],
-    boundingBox: Rect.fromLTWH(x, y, w, h),
-    recognizedLanguages: const [],
-    cornerPoints: const [],
-    confidence: null,
-    angle: null,
-  );
+  return ReceiptOcrLine(text: text, boundingBox: Rect.fromLTWH(x, y, w, h));
 }
 
 /// Uji parser nominal struk (bagian pure-nya OCR — tanpa ML Kit/HP).

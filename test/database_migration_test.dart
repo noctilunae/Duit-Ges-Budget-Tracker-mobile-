@@ -8,7 +8,7 @@ void main() {
   test('migrasi v7 membulatkan nominal dan menambah relasi pembayaran', () async {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
-    final dir = Directory.systemTemp.createTempSync('duit_nia_migration_');
+    final dir = Directory.systemTemp.createTempSync('duit_ges_migration_');
     addTearDown(() => dir.deleteSync(recursive: true));
     await databaseFactory.setDatabasesPath(dir.path);
     final old = await openDatabase(
@@ -119,7 +119,15 @@ void main() {
       (await db.rawQuery(
         'PRAGMA table_info(budgets)',
       )).map((column) => column['name']),
-      containsAll(['id', 'name', 'icon', 'color', 'budget_type']),
+      containsAll([
+        'id',
+        'name',
+        'icon',
+        'color',
+        'budget_type',
+        'scope',
+        'category_id',
+      ]),
     );
     expect(
       (await db.rawQuery(
@@ -133,5 +141,11 @@ void main() {
       )).map((column) => column['name']),
       contains('icon'),
     );
+    final indexes = (await db.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type = 'index'",
+    )).map((row) => row['name']);
+    expect(indexes, containsAll(['idx_tx_date_id', 'idx_tx_wallet_date_id']));
+    expect(indexes, isNot(contains('idx_tx_date')));
+    expect(indexes, isNot(contains('idx_tx_wallet')));
   });
 }

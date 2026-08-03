@@ -10,6 +10,7 @@ import '../utils/app_style.dart';
 import '../utils/formatters.dart';
 import '../widgets/animated_widgets.dart';
 import '../widgets/looping_asset_video.dart';
+import '../widgets/custom_template_view.dart';
 import '../widgets/month_selector.dart';
 import '../widgets/page_header.dart';
 import '../widgets/transaction_detail_sheet.dart';
@@ -34,6 +35,7 @@ class HomeScreen extends StatelessWidget {
           PageHeader(
             title: 'Duit Ges',
             artworkTile: 1,
+            headerIndex: 0,
             action: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -131,6 +133,20 @@ class _BalanceCard extends StatelessWidget {
   _CardPalette _palette(BuildContext context, SettingsProvider settings) {
     final scheme = Theme.of(context).colorScheme;
     final radius = BorderRadius.circular(24);
+    if (settings.customCard != null) {
+      return _CardPalette(
+        decoration: BoxDecoration(
+          color: Colors.black,
+          borderRadius: radius,
+          boxShadow: cardShadow(context),
+        ),
+        amount: Colors.white,
+        label: Colors.white70,
+        chipBg: Colors.black38,
+        chipIcon: Colors.white,
+        amountGlow: const [Shadow(color: Colors.black, blurRadius: 10)],
+      );
+    }
     switch (settings.cardStyle) {
       case CardStyle.gradient:
         return _CardPalette(
@@ -273,6 +289,20 @@ class _BalanceCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         child: Stack(
           children: [
+            if (settings.customCard != null) ...[
+              Positioned.fill(
+                child: CustomTemplateView(template: settings.customCard!),
+              ),
+              const Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0x66000000), Color(0x22000000)],
+                    ),
+                  ),
+                ),
+              ),
+            ],
             if (videoAsset != null) ...[
               Positioned.fill(
                 child: AnimatedSwitcher(
@@ -318,10 +348,13 @@ class _BalanceCard extends StatelessWidget {
               ),
             // Di-center vertikal + margin 16 biar ga kepotong
             // lengkungan sudut kartu (radius 24).
-            if ((settings.artwork != null ||
+            if ((settings.cardMascotArtwork != null ||
+                    settings.artwork != null ||
                     settings.preset.tileGifs.containsKey(0)) &&
-                settings.preset.id != 'jjk2' &&
-                settings.cardStyle != CardStyle.callDuck)
+                (settings.hasCustomCardMascot ||
+                    (settings.customCard == null &&
+                        settings.preset.id != 'jjk2' &&
+                        settings.cardStyle != CardStyle.callDuck)))
               Positioned(
                 right: 16,
                 top: 0,
@@ -335,12 +368,17 @@ class _BalanceCard extends StatelessWidget {
                       // lebih tinggi dari watermark PNG line-art biasa —
                       // di 0.28 dia keliatan pudar/samar gara-gara detail
                       // warnanya kebanyakan buat opacity serendah itu.
-                      opacity: settings.preset.tileGifs.containsKey(0)
+                      opacity: settings.hasCustomCardMascot
+                          ? 0.65
+                          : settings.preset.tileGifs.containsKey(0)
                           ? 0.45
                           : 0.28,
                       child: ThemeArtwork(
                         tile: settings.preset.id == 'jjk' ? 7 : 0,
-                        size: settings.preset.tileGifs.containsKey(0)
+                        cardMascot: true,
+                        size: settings.hasCustomCardMascot
+                            ? 96
+                            : settings.preset.tileGifs.containsKey(0)
                             ? 120
                             : const {
                                 'jjk',
@@ -951,6 +989,7 @@ class _EmptyState extends StatelessWidget {
           ThemeArtwork(
             tile: 1,
             size: 104,
+            headerIndex: 0,
             fallback: Icon(
               preset.emptyIcon ?? Icons.account_balance_wallet_outlined,
               size: 64,

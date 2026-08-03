@@ -14,6 +14,8 @@ import '../providers/transaction_provider.dart';
 import '../providers/wallet_provider.dart';
 import '../services/receipt_ocr.dart';
 import '../utils/formatters.dart';
+import '../utils/stored_icon.dart';
+import '../widgets/custom_image_icon_picker.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   /// Kalau diisi, layar ini jadi mode edit (prefill + update, bukan insert).
@@ -22,12 +24,16 @@ class AddTransactionScreen extends StatefulWidget {
   /// Prefill transaksi baru, misalnya dari catatan utang/piutang.
   final TransactionModel? draft;
   final String? budgetId;
+  final TxType? transactionType;
+  final String? categoryId;
 
   const AddTransactionScreen({
     super.key,
     this.existing,
     this.draft,
     this.budgetId,
+    this.transactionType,
+    this.categoryId,
   }) : assert(existing == null || draft == null);
 
   @override
@@ -61,13 +67,19 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     _amountController.addListener(_onAmountEditedByUser);
     final seed = widget.existing ?? widget.draft;
     if (seed != null) {
-      _type = seed.type;
-      _categoryId = seed.categoryId;
+      _type = widget.transactionType ?? seed.type;
+      _categoryId =
+          widget.transactionType != null && widget.transactionType != seed.type
+          ? null
+          : seed.categoryId;
       _walletId = seed.walletId;
       _receiptPath = seed.receiptPath;
       _date = seed.date;
       _amountController.text = groupRibuan(seed.amount.toInt().toString());
       _noteController.text = seed.note;
+    } else {
+      _type = widget.transactionType ?? TxType.expense;
+      _categoryId = widget.categoryId;
     }
   }
 
@@ -208,7 +220,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     _unsavedReceiptPaths.add(path);
     setState(() => _receiptPath = path);
     _discardUnsavedReceipt(previous);
-    await _scanReceipt(path);
+    if (appFlavor != 'lite') await _scanReceipt(path);
   }
 
   void _discardUnsavedReceipt(String? path) {
@@ -329,12 +341,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               ),
             ],
             selected: {_type},
-            onSelectionChanged: (selection) {
-              setState(() {
-                _type = selection.first;
-                _categoryId = null;
-              });
-            },
+            onSelectionChanged: widget.transactionType != null
+                ? null
+                : (selection) {
+                    setState(() {
+                      _type = selection.first;
+                      _categoryId = null;
+                    });
+                  },
           ),
           const SizedBox(height: 20),
           TextField(
@@ -361,6 +375,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           _ReceiptTile(
             hasReceipt: _receiptPath != null,
             fromOcr: _amountFromOcr,
+            ocrEnabled: appFlavor != 'lite',
             onTap: _showReceiptPicker,
             onRemove: () {
               _discardUnsavedReceipt(_receiptPath);
@@ -533,12 +548,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 class _ReceiptTile extends StatelessWidget {
   final bool hasReceipt;
   final bool fromOcr;
+  final bool ocrEnabled;
   final VoidCallback onTap;
   final VoidCallback onRemove;
 
   const _ReceiptTile({
     required this.hasReceipt,
     required this.fromOcr,
+    required this.ocrEnabled,
     required this.onTap,
     required this.onRemove,
   });
@@ -592,7 +609,9 @@ class _ReceiptTile extends StatelessWidget {
         subtitle: Text(
           fromOcr
               ? 'Nominal ke-isi otomatis — cek lagi ya'
-              : 'Opsional, OCR supported',
+              : ocrEnabled
+              ? 'Opsional, nominal dibaca otomatis'
+              : 'Opsional, simpan foto struk',
           style: fromOcr ? TextStyle(color: scheme.primary) : null,
         ),
         trailing: hasReceipt
@@ -1024,6 +1043,12 @@ class _AddCategoriesSheetState extends State<_AddCategoriesSheet> {
       ).showSnackBar(const SnackBar(content: Text('Masukkan satu emoji')));
       return;
     }
+    if (_iconKey.startsWith('image:') && !isValidStoredImageIcon(_iconKey)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pilih gambar ikon terlebih dahulu')),
+      );
+      return;
+    }
     final savedIcon = _iconKey.startsWith('emoji:') ? 'emoji:$emoji' : _iconKey;
     setState(() => _saving = true);
     if (_isEdit) {
@@ -1105,27 +1130,79 @@ class _AddCategoriesSheetState extends State<_AddCategoriesSheet> {
               style: TextStyle(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
-            SegmentedButton<bool>(
+            SegmentedButton<String>(
               segments: const [
-                ButtonSegment(value: false, label: Text('Ikon warna')),
-                ButtonSegment(value: true, label: Text('Emoji')),
+                ButtonSegment(value: 'icon', label: Text('Ikon')),
+                ButtonSegment(value: 'emoji', label: Text('Emoji')),
+                ButtonSegment(value: 'image', label: Text('PNG/JPG')),
               ],
-              selected: {_iconKey.startsWith('emoji:')},
+              selected: {
+                _iconKey.startsWith('emoji:')
+                    ? 'emoji'
+                    : _iconKey.startsWith('image:')
+                    ? 'image'
+                    : 'icon',
+              },
               onSelectionChanged: (value) => setState(() {
-                _iconKey = value.first ? 'emoji:' : 'star';
+                _iconKey = switch (value.first) {
+                  'emoji' => 'emoji:',
+                  'image' =>
+                    _iconKey.startsWith('image:') ? _iconKey : 'image:',
+                  _ => 'star',
+                };
               }),
             ),
             const SizedBox(height: 8),
             if (_iconKey.startsWith('emoji:'))
-              TextField(
-                controller: _emojiController,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 32),
-                decoration: const InputDecoration(
-                  labelText: 'Emoji kategori',
-                  hintText: '🦆',
-                  helperText: 'Masukkan satu emoji dari keyboard HP',
-                ),
+              Column(
+                children: [
+                  ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _emojiController,
+                    builder: (_, value, _) => CircleAvatar(
+                      radius: 36,
+                      backgroundColor: _color.withValues(alpha: 0.15),
+                      child: value.text.trim().isEmpty
+                          ? Icon(
+                              Icons.emoji_emotions_outlined,
+                              color: _color,
+                              size: 32,
+                            )
+                          : Padding(
+                              padding: const EdgeInsets.all(8),
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  value.text.trim(),
+                                  style: const TextStyle(fontSize: 32),
+                                ),
+                              ),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Preview di lingkaran',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _emojiController,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 32),
+                    decoration: const InputDecoration(
+                      labelText: 'Emoji kategori',
+                      hintText: '🦆',
+                      helperText: 'Masukkan satu emoji dari keyboard HP',
+                    ),
+                  ),
+                ],
+              )
+            else if (_iconKey.startsWith('image:'))
+              CustomImageIconPicker(
+                iconKey: _iconKey,
+                fallbackKey: 'star',
+                previewColor: _color,
+                onChanged: (value) => setState(() => _iconKey = value),
               )
             else
               GridView.count(
@@ -1160,9 +1237,12 @@ class _AddCategoriesSheetState extends State<_AddCategoriesSheet> {
             const SizedBox(height: 20),
             const Text('Warna', style: TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
+            GridView.count(
+              crossAxisCount: 7,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
               children: [
                 for (final color in categoryColorChoices)
                   InkWell(

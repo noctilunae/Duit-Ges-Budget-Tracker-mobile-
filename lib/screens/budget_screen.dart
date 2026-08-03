@@ -6,11 +6,15 @@ import '../models/budget.dart';
 import '../models/category.dart';
 import '../models/transaction.dart';
 import '../providers/budget_provider.dart';
+import '../providers/category_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/transaction_provider.dart';
 import '../utils/app_style.dart';
 import '../utils/formatters.dart';
+import '../utils/stored_icon.dart';
 import '../widgets/animated_widgets.dart';
+import '../widgets/budget_type_field.dart';
+import '../widgets/custom_image_icon_picker.dart';
 import '../widgets/page_header.dart';
 import '../widgets/theme_artwork.dart';
 import '../widgets/month_selector.dart';
@@ -38,7 +42,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
     final isLight = Theme.of(context).brightness == Brightness.light;
-    final backgrounds = isLight
+    final backgrounds = settings.hasCustomPageColor(1)
+        ? null
+        : isLight
         ? settings.preset.budgetSubTabLightBackgrounds
         : settings.preset.budgetSubTabDarkBackgrounds;
     final background = backgrounds?[_tab.index];
@@ -58,6 +64,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
             PageHeader(
               title: 'Budget',
               artworkTile: 7,
+              headerIndex: 1,
               action: IconButton(
                 icon: const Icon(Icons.summarize_outlined),
                 tooltip: 'Rekap',
@@ -122,7 +129,7 @@ class _BudgetView extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 36),
                   child: Column(
                     children: [
-                      const ThemeArtwork(tile: 4, size: 88),
+                      const ThemeArtwork(tile: 7, size: 88, headerIndex: 1),
                       const SizedBox(height: 12),
                       Text(
                         'Belum ada budget.\nBuat sesuai kebutuhanmu sendiri.',
@@ -134,8 +141,8 @@ class _BudgetView extends StatelessWidget {
                     ],
                   ),
                 ),
-              for (final type in BudgetType.values)
-                if (budgets.any((budget) => budget.type == type))
+              for (final scope in BudgetScope.values)
+                if (budgets.any((budget) => budget.scope == scope))
                   Theme(
                     data: Theme.of(
                       context,
@@ -144,23 +151,26 @@ class _BudgetView extends StatelessWidget {
                       tilePadding: const EdgeInsets.symmetric(horizontal: 4),
                       initiallyExpanded: true,
                       title: Text(
-                        _typeLabel(type),
+                        scope == BudgetScope.category ? 'Kategori' : 'Tipe',
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       subtitle: Text(
-                        '${budgets.where((item) => item.type == type).length} budget',
+                        '${budgets.where((item) => item.scope == scope).length} budget',
                         style: const TextStyle(fontSize: 11),
                       ),
                       children: [
                         for (final budget in budgets.where(
-                          (item) => item.type == type,
+                          (item) => item.scope == scope,
                         ))
                           _BudgetCard(
                             budget: budget,
                             transactions: transactions
                                 .where(
                                   (transaction) =>
-                                      transaction.budgetId == budget.id,
+                                      budget.scope == BudgetScope.category
+                                      ? transaction.categoryId ==
+                                            budget.categoryId
+                                      : transaction.budgetId == budget.id,
                                 )
                                 .toList(),
                           ),
@@ -192,12 +202,13 @@ class _BudgetCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final spent = transactions
-        .where((transaction) => transaction.type == TxType.expense)
+    final total = transactions
+        .where((transaction) => transaction.type == budget.transactionType)
         .fold<double>(0, (sum, transaction) => sum + transaction.amount);
-    final fraction = budget.amount == 0 ? 0.0 : spent / budget.amount;
-    final over = spent > budget.amount;
-    final statusColor = over ? expenseColor : budget.color;
+    final isIncome = budget.transactionType == TxType.income;
+    final fraction = budget.amount == 0 ? 0.0 : total / budget.amount;
+    final over = total > budget.amount;
+    final statusColor = over && !isIncome ? expenseColor : budget.color;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
@@ -243,7 +254,7 @@ class _BudgetCard extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        '${rupiah(spent)} dari ${rupiah(budget.amount)}',
+                        '${rupiah(total)} dari ${rupiah(budget.amount)}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -260,7 +271,13 @@ class _BudgetCard extends StatelessWidget {
                 onPressed: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => AddTransactionScreen(budgetId: budget.id),
+                    builder: (_) => AddTransactionScreen(
+                      budgetId: budget.scope == BudgetScope.type
+                          ? budget.id
+                          : null,
+                      transactionType: budget.transactionType,
+                      categoryId: budget.categoryId,
+                    ),
                   ),
                 ),
                 icon: Icon(
@@ -283,9 +300,13 @@ class _BudgetCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            over
-                ? 'Jebol ${rupiah(spent - budget.amount)}'
-                : 'Sisa ${rupiah(budget.amount - spent)}',
+            isIncome
+                ? over
+                      ? 'Target terlampaui ${rupiah(total - budget.amount)}'
+                      : 'Kurang ${rupiah(budget.amount - total)}'
+                : over
+                ? 'Jebol ${rupiah(total - budget.amount)}'
+                : 'Sisa ${rupiah(budget.amount - total)}',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
@@ -384,7 +405,9 @@ class _BudgetSheetState extends State<_BudgetSheet> {
   late final _emoji = TextEditingController(text: widget.existing?.emoji ?? '');
   late String _iconKey = widget.existing?.iconKey ?? 'savings';
   late Color _color = widget.existing?.color ?? categoryColorChoices.first;
-  late BudgetType _type = widget.existing?.type ?? BudgetType.kebutuhan;
+  late String _type = widget.existing?.type ?? BudgetType.kebutuhan;
+  late BudgetScope _scope = widget.existing?.scope ?? BudgetScope.category;
+  late String? _categoryId = widget.existing?.categoryId;
 
   @override
   void dispose() {
@@ -394,13 +417,44 @@ class _BudgetSheetState extends State<_BudgetSheet> {
     super.dispose();
   }
 
+  Widget _amountField() => TextField(
+    controller: _amount,
+    keyboardType: TextInputType.number,
+    inputFormatters: [
+      FilteringTextInputFormatter.digitsOnly,
+      RibuanInputFormatter(),
+    ],
+    decoration: const InputDecoration(
+      labelText: 'Nominal budget',
+      prefixText: 'Rp ',
+    ),
+  );
+
   Future<void> _save() async {
-    final name = _name.text.trim();
+    final category = _scope == BudgetScope.category && _categoryId != null
+        ? categoryById(_categoryId!)
+        : null;
+    final name = category?.name ?? _name.text.trim();
     final amount = double.tryParse(_amount.text.replaceAll('.', '')) ?? 0;
     final emoji = _emoji.text.trim();
+    final iconKey = category == null
+        ? (_iconKey.startsWith('emoji:') ? 'emoji:$emoji' : _iconKey)
+        : category.imageKey != null
+        ? category.imageKey!
+        : category.emoji != null
+        ? 'emoji:${category.emoji}'
+        : categoryIconChoices.entries
+                  .where((entry) => entry.value == category.icon)
+                  .map((entry) => entry.key)
+                  .firstOrNull ??
+              'category';
     if (name.isEmpty ||
         amount <= 0 ||
-        (_iconKey.startsWith('emoji:') && emoji.isEmpty)) {
+        (_scope == BudgetScope.category && _categoryId == null) ||
+        (category == null &&
+            _iconKey.startsWith('image:') &&
+            !isValidStoredImageIcon(_iconKey)) ||
+        (category == null && _iconKey.startsWith('emoji:') && emoji.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Lengkapi nama, ikon, dan nominal budget'),
@@ -408,18 +462,29 @@ class _BudgetSheetState extends State<_BudgetSheet> {
       );
       return;
     }
-    await context.read<BudgetProvider>().saveBudget(
-      Budget(
-        id:
-            widget.existing?.id ??
-            'budget_${DateTime.now().microsecondsSinceEpoch}',
-        name: name,
-        iconKey: _iconKey.startsWith('emoji:') ? 'emoji:$emoji' : _iconKey,
-        color: _color,
-        type: _type,
-        amount: amount,
-      ),
-    );
+    try {
+      await context.read<BudgetProvider>().saveBudget(
+        Budget(
+          id:
+              widget.existing?.id ??
+              'budget_${DateTime.now().microsecondsSinceEpoch}',
+          name: name,
+          iconKey: iconKey,
+          color: category?.color ?? _color,
+          type: _type,
+          amount: amount,
+          scope: _scope,
+          categoryId: _scope == BudgetScope.category ? _categoryId : null,
+        ),
+      );
+    } on ArgumentError catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message?.toString() ?? '$error')),
+        );
+      }
+      return;
+    }
     if (mounted) Navigator.pop(context);
   }
 
@@ -446,123 +511,170 @@ class _BudgetSheetState extends State<_BudgetSheet> {
                 ),
               ),
               const SizedBox(height: 16),
-              TextField(
-                controller: _name,
-                autofocus: widget.existing == null,
-                decoration: const InputDecoration(labelText: 'Nama budget'),
+              SegmentedButton<BudgetScope>(
+                segments: const [
+                  ButtonSegment(
+                    value: BudgetScope.category,
+                    label: Text('Kategori'),
+                    icon: Icon(Icons.category_outlined, size: 17),
+                  ),
+                  ButtonSegment(
+                    value: BudgetScope.type,
+                    label: Text('Tipe'),
+                    icon: Icon(Icons.tune, size: 17),
+                  ),
+                ],
+                selected: {_scope},
+                onSelectionChanged: (value) =>
+                    setState(() => _scope = value.first),
               ),
               const SizedBox(height: 12),
-              InputDecorator(
-                decoration: const InputDecoration(labelText: 'Tipe budget'),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<BudgetType>(
-                    value: _type,
-                    isExpanded: true,
-                    isDense: true,
-                    items: [
-                      for (final type in BudgetType.values)
-                        DropdownMenuItem(
-                          value: type,
-                          child: Text(
-                            _typeLabel(type),
-                            overflow: TextOverflow.ellipsis,
+              if (_scope == BudgetScope.category) ...[
+                _amountField(),
+                const SizedBox(height: 12),
+              ],
+              if (_scope == BudgetScope.category)
+                Builder(
+                  builder: (context) {
+                    final provider = context.watch<CategoryProvider>();
+                    final options = [
+                      ...provider.expenseAll,
+                      ...provider.incomeAll,
+                    ];
+                    return Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final category in options)
+                          ChoiceChip(
+                            selected: _categoryId == category.id,
+                            showCheckmark: false,
+                            avatar: category.iconWidget(
+                              color: category.color,
+                              size: 18,
+                            ),
+                            label: Text(category.name),
+                            onSelected: (_) =>
+                                setState(() => _categoryId = category.id),
+                          ),
+                      ],
+                    );
+                  },
+                )
+              else
+                BudgetTypeField(
+                  value: _type,
+                  onChanged: (value) => setState(() => _type = value),
+                ),
+              const SizedBox(height: 12),
+              if (_scope == BudgetScope.type) ...[
+                TextField(
+                  controller: _name,
+                  autofocus: widget.existing == null,
+                  decoration: const InputDecoration(labelText: 'Nama budget'),
+                ),
+                const SizedBox(height: 12),
+                _amountField(),
+              ],
+              if (_scope == BudgetScope.type) ...[
+                const SizedBox(height: 16),
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(value: 'icon', label: Text('Ikon')),
+                    ButtonSegment(value: 'emoji', label: Text('Emoji')),
+                    ButtonSegment(value: 'image', label: Text('PNG/JPG')),
+                  ],
+                  selected: {
+                    _iconKey.startsWith('emoji:')
+                        ? 'emoji'
+                        : _iconKey.startsWith('image:')
+                        ? 'image'
+                        : 'icon',
+                  },
+                  onSelectionChanged: (value) => setState(
+                    () => _iconKey = switch (value.first) {
+                      'emoji' => 'emoji:',
+                      'image' =>
+                        _iconKey.startsWith('image:') ? _iconKey : 'image:',
+                      _ => 'savings',
+                    },
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if (_iconKey.startsWith('emoji:'))
+                  TextField(
+                    controller: _emoji,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 32),
+                    decoration: const InputDecoration(
+                      labelText: 'Emoji budget',
+                      hintText: '🦆',
+                    ),
+                  )
+                else if (_iconKey.startsWith('image:'))
+                  CustomImageIconPicker(
+                    iconKey: _iconKey,
+                    fallbackKey: 'savings',
+                    onChanged: (value) => setState(() => _iconKey = value),
+                  )
+                else
+                  GridView.count(
+                    crossAxisCount: 7,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    mainAxisSpacing: 6,
+                    crossAxisSpacing: 6,
+                    children: [
+                      for (final entry in categoryIconChoices.entries)
+                        InkWell(
+                          onTap: () => setState(() => _iconKey = entry.key),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: _iconKey == entry.key
+                                  ? _color.withValues(alpha: 0.18)
+                                  : Colors.transparent,
+                              border: Border.all(
+                                color: _iconKey == entry.key
+                                    ? _color
+                                    : Theme.of(
+                                        context,
+                                      ).colorScheme.outlineVariant,
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(entry.value, color: _color),
                           ),
                         ),
                     ],
-                    onChanged: (value) =>
-                        setState(() => _type = value ?? _type),
                   ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _amount,
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  RibuanInputFormatter(),
-                ],
-                decoration: const InputDecoration(
-                  labelText: 'Nominal budget',
-                  prefixText: 'Rp ',
-                ),
-              ),
-              const SizedBox(height: 16),
-              SegmentedButton<bool>(
-                segments: const [
-                  ButtonSegment(value: false, label: Text('Ikon warna')),
-                  ButtonSegment(value: true, label: Text('Emoji')),
-                ],
-                selected: {_iconKey.startsWith('emoji:')},
-                onSelectionChanged: (value) => setState(
-                  () => _iconKey = value.first ? 'emoji:' : 'savings',
-                ),
-              ),
-              const SizedBox(height: 8),
-              if (_iconKey.startsWith('emoji:'))
-                TextField(
-                  controller: _emoji,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 32),
-                  decoration: const InputDecoration(
-                    labelText: 'Emoji budget',
-                    hintText: '🦆',
-                  ),
-                )
-              else
+                const SizedBox(height: 16),
                 GridView.count(
                   crossAxisCount: 7,
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 6,
-                  crossAxisSpacing: 6,
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
                   children: [
-                    for (final entry in categoryIconChoices.entries)
+                    for (final color in categoryColorChoices)
                       InkWell(
-                        onTap: () => setState(() => _iconKey = entry.key),
-                        borderRadius: BorderRadius.circular(12),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: _iconKey == entry.key
-                                ? _color.withValues(alpha: 0.18)
-                                : Colors.transparent,
-                            border: Border.all(
-                              color: _iconKey == entry.key
-                                  ? _color
-                                  : Theme.of(
-                                      context,
-                                    ).colorScheme.outlineVariant,
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(entry.value, color: _color),
+                        onTap: () => setState(() => _color = color),
+                        customBorder: const CircleBorder(),
+                        child: CircleAvatar(
+                          radius: 16,
+                          backgroundColor: color,
+                          child: color == _color
+                              ? const Icon(
+                                  Icons.check,
+                                  color: Colors.white,
+                                  size: 17,
+                                )
+                              : null,
                         ),
                       ),
                   ],
                 ),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 9,
-                runSpacing: 9,
-                children: [
-                  for (final color in categoryColorChoices)
-                    InkWell(
-                      onTap: () => setState(() => _color = color),
-                      customBorder: const CircleBorder(),
-                      child: CircleAvatar(
-                        radius: 16,
-                        backgroundColor: color,
-                        child: color == _color
-                            ? const Icon(
-                                Icons.check,
-                                color: Colors.white,
-                                size: 17,
-                              )
-                            : null,
-                      ),
-                    ),
-                ],
-              ),
+              ],
               const SizedBox(height: 20),
               Row(
                 children: [
@@ -595,9 +707,3 @@ class _BudgetSheetState extends State<_BudgetSheet> {
     );
   }
 }
-
-String _typeLabel(BudgetType type) => switch (type) {
-  BudgetType.kebutuhan => 'Kebutuhan',
-  BudgetType.keinginan => 'Keinginan',
-  BudgetType.tabungan => 'Tabungan',
-};

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'category.dart';
+import '../utils/stored_icon.dart';
 
 /// Target nabung (savings goal): "Beli laptop Rp 15jt", dst.
 class Goal {
@@ -23,9 +24,13 @@ class Goal {
   String? get emoji =>
       iconKey.startsWith('emoji:') ? iconKey.substring(6) : null;
   IconData get icon => categoryIconChoices[iconKey] ?? Icons.savings;
-  Widget iconWidget({Color? color, double? size}) => emoji == null
-      ? Icon(icon, color: color, size: size)
-      : Text(emoji!, style: TextStyle(fontSize: size));
+  Widget iconWidget({Color? color, double? size}) => storedIconWidget(
+    iconKey,
+    size: size,
+    fallback: emoji == null
+        ? Icon(icon, color: color, size: size)
+        : Text(emoji!, style: TextStyle(fontSize: size)),
+  );
 
   bool get achieved => saved >= target;
   double get fraction => target == 0 ? 0 : (saved / target).clamp(0.0, 1.0);

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/settings_provider.dart';
+import 'theme_icon_view.dart';
 
 /// Menampilkan PNG transparan sesuai fungsi ikon pada tema aktif.
 class ThemeArtwork extends StatelessWidget {
@@ -44,6 +45,11 @@ class ThemeArtwork extends StatelessWidget {
   final double size;
   final ThemePreset? preset;
   final Widget? fallback;
+  final bool animateCustom;
+  final int? headerIndex;
+  final bool cardMascot;
+  final bool addTransaction;
+  final bool ignoreCustomization;
 
   const ThemeArtwork({
     super.key,
@@ -51,7 +57,19 @@ class ThemeArtwork extends StatelessWidget {
     required this.size,
     this.preset,
     this.fallback,
-  }) : assert(tile >= 0 && tile < 16);
+    this.animateCustom = true,
+    this.headerIndex,
+    this.cardMascot = false,
+    this.addTransaction = false,
+    this.ignoreCustomization = false,
+  }) : assert(tile >= 0 && tile < 16),
+       assert(headerIndex == null || (headerIndex >= 0 && headerIndex < 4)),
+       assert(
+         (headerIndex == null ? 0 : 1) +
+                 (cardMascot ? 1 : 0) +
+                 (addTransaction ? 1 : 0) <=
+             1,
+       );
 
   @override
   Widget build(BuildContext context) {
@@ -59,6 +77,26 @@ class ThemeArtwork extends StatelessWidget {
     final theme = preset ?? settings.preset;
     final artwork = preset == null ? settings.artwork : theme.artwork;
     final footerFallback = _footerFallbacks[theme.id]?[tile];
+    final custom = preset == null && !ignoreCustomization
+        ? headerIndex != null
+              ? settings.headerArtwork(headerIndex!)
+              : cardMascot
+              ? settings.cardMascotArtwork
+              : addTransaction
+              ? settings.addTransactionArtwork
+              : settings.themeArtwork(tile)
+        : null;
+
+    if (custom != null) {
+      return ThemeIconView(
+        iconKey: custom,
+        size: size,
+        previewSeconds: 3,
+        animate: animateCustom,
+        continuous: animateCustom,
+        fallback: fallback ?? const Icon(Icons.broken_image_outlined),
+      );
+    }
 
     if (footerFallback != null) {
       return Image.asset(

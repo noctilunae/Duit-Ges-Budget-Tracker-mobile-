@@ -46,12 +46,14 @@ class WalletProvider extends ChangeNotifier {
 
   Future<void> addWallet(Wallet wallet) async {
     await _db.insertWallet(wallet);
+    await _db.cleanupUnusedCustomIcons();
     await load();
     unawaited(WidgetService.update(syncOptions: true));
   }
 
   Future<void> updateWallet(Wallet wallet) async {
     await _db.updateWallet(wallet);
+    await _db.cleanupUnusedCustomIcons();
     await load();
     unawaited(WidgetService.update(syncOptions: true));
   }
@@ -63,6 +65,7 @@ class WalletProvider extends ChangeNotifier {
     final count = await _db.transactionCountForWallet(id);
     if (count > 0) return false;
     await _db.deleteWallet(id);
+    await _db.cleanupUnusedCustomIcons();
     await load();
     unawaited(WidgetService.update(syncOptions: true));
     return true;

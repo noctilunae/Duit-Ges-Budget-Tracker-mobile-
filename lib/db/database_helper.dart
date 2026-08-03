@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:archive/archive_io.dart';
+import 'package:flutter/services.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
@@ -20,13 +21,14 @@ import '../models/goal.dart';
 import '../models/recurring.dart';
 import '../models/transaction.dart';
 import '../models/wallet.dart';
+import '../utils/stored_icon.dart';
 
 enum RecapGrouping { daily, weekly, monthly, yearly }
 
 class DatabaseHelper {
   DatabaseHelper._();
   static final DatabaseHelper instance = DatabaseHelper._();
-  static const schemaVersion = 13;
+  static const schemaVersion = 15;
 
   Database? _db;
 
@@ -153,13 +155,35 @@ class DatabaseHelper {
             "ALTER TABLE goals ADD COLUMN icon TEXT NOT NULL DEFAULT 'savings'",
           );
         }
+        if (oldVersion < 14) {
+          await db.execute('DROP INDEX IF EXISTS idx_tx_date');
+          await db.execute('DROP INDEX IF EXISTS idx_tx_wallet');
+          for (final sql in _createIndexes) {
+            await db.execute(sql);
+          }
+        }
+        if (oldVersion < 15) {
+          final columns = (await db.rawQuery(
+            'PRAGMA table_info(budgets)',
+          )).map((column) => column['name']).toSet();
+          if (!columns.contains('scope')) {
+            await db.execute(
+              "ALTER TABLE budgets ADD COLUMN scope TEXT NOT NULL DEFAULT 'type'",
+            );
+          }
+          if (!columns.contains('category_id')) {
+            await db.execute('ALTER TABLE budgets ADD COLUMN category_id TEXT');
+          }
+        }
       },
     );
   }
 
   static const _createIndexes = [
-    'CREATE INDEX IF NOT EXISTS idx_tx_date ON transactions(date)',
-    'CREATE INDEX IF NOT EXISTS idx_tx_wallet ON transactions(wallet_id)',
+    'CREATE INDEX IF NOT EXISTS idx_tx_date_id '
+        'ON transactions(date DESC, id DESC)',
+    'CREATE INDEX IF NOT EXISTS idx_tx_wallet_date_id '
+        'ON transactions(wallet_id, date DESC, id DESC)',
     'CREATE INDEX IF NOT EXISTS idx_tx_category ON transactions(category_id)',
   ];
 
@@ -194,7 +218,9 @@ class DatabaseHelper {
       icon TEXT NOT NULL,
       color INTEGER NOT NULL,
       budget_type TEXT NOT NULL DEFAULT 'kebutuhan',
-      amount INTEGER NOT NULL
+      amount INTEGER NOT NULL,
+      scope TEXT NOT NULL DEFAULT 'type',
+      category_id TEXT
     )
   ''';
 
@@ -398,6 +424,7 @@ class DatabaseHelper {
 
   Future<int> insert(TransactionModel tx) async {
     final db = await database;
+    await _validateBudgetTransaction(db, tx);
     final map = tx.toMap()..remove('id');
     return db.insert('transactions', map);
   }
@@ -532,6 +559,7 @@ class DatabaseHelper {
 
   Future<int> update(TransactionModel tx) async {
     final db = await database;
+    await _validateBudgetTransaction(db, tx);
     final rows = await db.query(
       'transactions',
       columns: ['receipt_path'],
@@ -553,6 +581,31 @@ class DatabaseHelper {
       await _deleteReceiptIfUnused(oldReceiptPath);
     }
     return updated;
+  }
+
+  Future<void> _validateBudgetTransaction(
+    Database db,
+    TransactionModel tx,
+  ) async {
+    if (tx.budgetId == null) return;
+    final rows = await db.query(
+      'budgets',
+      columns: ['budget_type'],
+      where: 'id = ?',
+      whereArgs: [tx.budgetId],
+      limit: 1,
+    );
+    if (rows.isEmpty) return;
+    final expected = rows.single['budget_type'] == BudgetType.tabungan
+        ? TxType.income
+        : TxType.expense;
+    if (tx.type != expected) {
+      throw ArgumentError(
+        expected == TxType.income
+            ? 'Budget Tabungan hanya menerima pemasukan'
+            : 'Budget ini hanya menerima pengeluaran',
+      );
+    }
   }
 
   Future<void> _deleteReceiptIfUnused(String? path) async {
@@ -719,6 +772,17 @@ class DatabaseHelper {
 
   Future<void> saveBudget(Budget budget) async {
     final db = await database;
+    if (budget.scope == BudgetScope.category) {
+      final duplicate = Sqflite.firstIntValue(
+        await db.rawQuery(
+          'SELECT COUNT(*) FROM budgets WHERE scope = ? AND category_id = ? AND id != ?',
+          [BudgetScope.category.name, budget.categoryId, budget.id],
+        ),
+      );
+      if ((duplicate ?? 0) > 0) {
+        throw ArgumentError('Kategori ini sudah memiliki budget');
+      }
+    }
     await db.insert(
       'budgets',
       budget.toMap(),
@@ -733,12 +797,18 @@ class DatabaseHelper {
 
   Future<void> saveSalaryAllocations(List<Map<String, Object?>> rows) async {
     final categories = <Object?>{};
+    var allocated = 0;
+    int? ruleSalary;
     for (final row in rows) {
       final day = row['day'] as int? ?? 0;
       final salary = row['salary'] as int? ?? 0;
       final amount = row['amount'] as int?;
       final percentage = row['percentage'] as num?;
-      if (!categories.add(row['budget_id']) ||
+      final salaryMismatch = ruleSalary != null && ruleSalary != salary;
+      ruleSalary ??= salary;
+      allocated += amount ?? (salary * (percentage ?? 0) / 100).round();
+      if (salaryMismatch ||
+          !categories.add(row['budget_id']) ||
           day < 1 ||
           day > 28 ||
           salary < 0 ||
@@ -748,11 +818,25 @@ class DatabaseHelper {
         throw ArgumentError('Rule pembagian gaji tidak valid');
       }
     }
+    if (rows.isNotEmpty && (ruleSalary! <= 0 || allocated > ruleSalary)) {
+      throw ArgumentError('Pembagian melebihi nominal gaji');
+    }
     final db = await database;
     await db.transaction((txn) async {
+      final applied = await txn.query(
+        'salary_allocations',
+        columns: ['last_period'],
+        where: 'last_period IS NOT NULL',
+        orderBy: 'last_period DESC',
+        limit: 1,
+      );
+      final lastPeriod = applied.isEmpty ? null : applied.first['last_period'];
       await txn.delete('salary_allocations');
       for (final row in rows) {
-        await txn.insert('salary_allocations', row);
+        await txn.insert('salary_allocations', {
+          ...row,
+          'last_period': lastPeriod,
+        });
       }
     });
   }
@@ -786,8 +870,7 @@ class DatabaseHelper {
           limit: 1,
         );
         if (budget.isEmpty) continue;
-        final savedAmount =
-            budget.first['budget_type'] == BudgetType.tabungan.name
+        final savedAmount = budget.first['budget_type'] == BudgetType.tabungan
             ? (budget.first['amount'] as int) + amount
             : amount;
         await txn.update(
@@ -1187,13 +1270,14 @@ class DatabaseHelper {
     await db.delete('custom_categories', where: 'id = ?', whereArgs: [id]);
   }
 
-  Future<int> transactionCountForCategory(String categoryId) async {
+  Future<int> categoryUsageCount(String categoryId) async {
     final db = await database;
     final result = await db.rawQuery(
       'SELECT '
       '(SELECT COUNT(*) FROM transactions WHERE category_id = ?) + '
-      '(SELECT COUNT(*) FROM recurrings WHERE category_id = ?) AS c',
-      [categoryId, categoryId],
+      '(SELECT COUNT(*) FROM recurrings WHERE category_id = ?) + '
+      '(SELECT COUNT(*) FROM budgets WHERE category_id = ?) AS c',
+      [categoryId, categoryId, categoryId],
     );
     return result.first['c'] as int;
   }
@@ -1284,17 +1368,28 @@ class DatabaseHelper {
   Future<String> databasePath() async =>
       join(await getDatabasesPath(), 'duit_ges.db');
 
-  /// Backup lengkap: database + foto struk yang masih dipakai.
-  Future<void> backupTo(String targetPath) async {
+  /// Backup database, dengan foto struk bila [includeReceipts] aktif.
+  Future<void> backupTo(
+    String targetPath, {
+    bool includeReceipts = true,
+  }) async {
     final db = await database;
     await db.rawQuery('PRAGMA wal_checkpoint(FULL)');
     final encoder = ZipFileEncoder()..create(targetPath);
     try {
       await encoder.addFile(File(await databasePath()), 'duit_ges.db');
-      for (final path in await usedReceiptPaths()) {
+      if (includeReceipts) {
+        for (final path in await usedReceiptPaths()) {
+          final file = File(path);
+          if (await file.exists()) {
+            await encoder.addFile(file, 'struk/${basename(path)}');
+          }
+        }
+      }
+      for (final path in await usedCustomIconPaths()) {
         final file = File(path);
         if (await file.exists()) {
-          await encoder.addFile(file, 'struk/${basename(path)}');
+          await encoder.addFile(file, 'custom_icons/${basename(path)}');
         }
       }
     } finally {
@@ -1308,14 +1403,25 @@ class DatabaseHelper {
     final candidate = File('$dbPath.restore');
     final safety = File('$dbPath.before_restore');
     Archive? archive;
+    InputFileStream? archiveInput;
     var replaced = false;
     try {
-      final bytes = await File(sourcePath).readAsBytes();
-      if (bytes.length >= 2 && bytes[0] == 0x50 && bytes[1] == 0x4B) {
-        archive = ZipDecoder().decodeBytes(bytes, verify: true);
+      final source = File(sourcePath);
+      final header = await source
+          .openRead(0, 2)
+          .fold<List<int>>(<int>[], (bytes, chunk) => bytes..addAll(chunk));
+      if (header.length >= 2 && header[0] == 0x50 && header[1] == 0x4B) {
+        archiveInput = InputFileStream(sourcePath);
+        // Validasi database dilakukan lewat integrity_check di bawah. Tidak
+        // memakai verify ZIP di sini karena archive 3.x akan mendekompresi
+        // seluruh entri sekaligus dan menahannya di RAM.
+        archive = ZipDecoder().decodeBuffer(archiveInput);
         final databaseFile = archive.findFile('duit_ges.db');
         if (databaseFile == null) return false;
-        await candidate.writeAsBytes(databaseFile.content as List<int>);
+        final output = OutputFileStream(candidate.path);
+        databaseFile.writeContent(output);
+        await output.close();
+        databaseFile.clear();
       } else {
         await File(sourcePath).copy(candidate.path);
       }
@@ -1334,6 +1440,7 @@ class DatabaseHelper {
       await _deleteIfExists('$dbPath-shm');
       await database;
       await _restoreReceiptPaths(archive);
+      await _restoreCustomIconPaths(archive);
       return true;
     } catch (_) {
       await _db?.close();
@@ -1346,6 +1453,7 @@ class DatabaseHelper {
       }
       return false;
     } finally {
+      await archiveInput?.close();
       if (await candidate.exists()) await candidate.delete();
     }
   }
@@ -1391,7 +1499,10 @@ class DatabaseHelper {
       String? newPath;
       if (archived != null) {
         newPath = join(receiptDir.path, name);
-        await File(newPath).writeAsBytes(archived.content as List<int>);
+        final output = OutputFileStream(newPath);
+        archived.writeContent(output);
+        await output.close();
+        archived.clear();
       } else if (await File(oldPath).exists()) {
         newPath = oldPath;
       }
@@ -1399,6 +1510,87 @@ class DatabaseHelper {
         'UPDATE transactions SET receipt_path = ? WHERE receipt_path = ?',
         [newPath, oldPath],
       );
+    }
+  }
+
+  Future<Map<String, List<String>>> customIconUsages() async {
+    final db = await database;
+    final usages = <String, List<String>>{};
+    for (final source in const [
+      (table: 'custom_categories', label: 'Kategori'),
+      (table: 'wallets', label: 'Dompet'),
+      (table: 'budgets', label: 'Budget'),
+      (table: 'goals', label: 'Target'),
+    ]) {
+      final rows = await db.query(
+        source.table,
+        columns: ['name', 'icon'],
+        where: "icon LIKE 'image:%'",
+      );
+      for (final row in rows) {
+        final image = parseStoredImageIcon(row['icon'] as String);
+        if (image != null) {
+          (usages[image.path] ??= []).add('${source.label}: ${row['name']}');
+        }
+      }
+    }
+    return usages;
+  }
+
+  Future<Set<String>> usedCustomIconPaths() async =>
+      (await customIconUsages()).keys.toSet();
+
+  Future<void> cleanupUnusedCustomIcons() async {
+    final Directory documentDir;
+    try {
+      documentDir = await getApplicationDocumentsDirectory();
+    } on MissingPluginException {
+      return;
+    }
+    final directory = Directory(join(documentDir.path, 'custom_icons'));
+    if (!await directory.exists()) return;
+    final used = await usedCustomIconPaths();
+    await for (final entity in directory.list()) {
+      if (entity is File && !used.contains(entity.path)) await entity.delete();
+    }
+  }
+
+  Future<void> _restoreCustomIconPaths(Archive? archive) async {
+    if (archive == null) return;
+    final db = await database;
+    final documentDir = await getApplicationDocumentsDirectory();
+    final directory = Directory(join(documentDir.path, 'custom_icons'));
+    await directory.create(recursive: true);
+    for (final table in const [
+      'custom_categories',
+      'wallets',
+      'budgets',
+      'goals',
+    ]) {
+      final rows = await db.query(
+        table,
+        columns: ['icon'],
+        where: "icon LIKE 'image:%'",
+      );
+      for (final row in rows) {
+        final oldKey = row['icon'] as String;
+        final image = parseStoredImageIcon(oldKey);
+        if (image == null) continue;
+        final name = basename(image.path);
+        final archived = archive.findFile('custom_icons/$name');
+        if (archived == null) continue;
+        final newPath = join(directory.path, name);
+        final output = OutputFileStream(newPath);
+        archived.writeContent(output);
+        await output.close();
+        archived.clear();
+        await db.update(
+          table,
+          {'icon': storedImageIcon(newPath, image.scale)},
+          where: 'icon = ?',
+          whereArgs: [oldKey],
+        );
+      }
     }
   }
 

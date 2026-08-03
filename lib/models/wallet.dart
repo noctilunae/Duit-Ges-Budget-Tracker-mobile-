@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'category.dart' show categoryColorChoices;
+import '../utils/stored_icon.dart';
+
 /// Pilihan icon dompet (disimpen sebagai key string di DB).
 const walletIcons = <String, IconData>{
   'cash': Icons.payments,
@@ -22,22 +25,7 @@ const walletIcons = <String, IconData>{
   'other': Icons.category,
 };
 
-const walletColors = [
-  Color(0xFFEF5350),
-  Color(0xFFFF7043),
-  Color(0xFFFFA726),
-  Color(0xFFFFCA28),
-  Color(0xFFFFF176),
-  Color(0xFF66BB6A),
-  Color(0xFF26A69A),
-  Color(0xFF26C6DA),
-  Color(0xFF2E5BFF),
-  Color(0xFF5C6BC0),
-  Color(0xFFAB47BC),
-  Color(0xFFEC407A),
-  Color(0xFF8D6E63),
-  Color(0xFF78909C),
-];
+const walletColors = categoryColorChoices;
 
 class Wallet {
   final int? id;
@@ -58,9 +46,13 @@ class Wallet {
   String? get emoji =>
       iconKey.startsWith('emoji:') ? iconKey.substring(6) : null;
 
-  Widget iconWidget({Color? color, double? size}) => emoji == null
-      ? Icon(icon, color: color, size: size)
-      : Text(emoji!, style: TextStyle(fontSize: size));
+  Widget iconWidget({Color? color, double? size}) => storedIconWidget(
+    iconKey,
+    size: size,
+    fallback: emoji == null
+        ? Icon(icon, color: color, size: size)
+        : Text(emoji!, style: TextStyle(fontSize: size)),
+  );
 
   Map<String, dynamic> toMap() {
     return {

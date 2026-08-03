@@ -36,6 +36,7 @@ class _StatsScreenState extends State<StatsScreen> {
           PageHeader(
             title: 'Statistik',
             artworkTile: 8,
+            headerIndex: 2,
             action: IconButton(
               icon: const Icon(Icons.summarize_outlined),
               tooltip: 'Rekap',
@@ -83,7 +84,7 @@ class _StatsScreenState extends State<StatsScreen> {
                     ),
                     child: Column(
                       children: [
-                        const ThemeArtwork(tile: 8, size: 96),
+                        const ThemeArtwork(tile: 8, size: 96, headerIndex: 2),
                         const SizedBox(height: 10),
                         Text(
                           'Belum ada data bulan ini',

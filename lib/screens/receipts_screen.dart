@@ -9,37 +9,35 @@ import '../providers/transaction_provider.dart';
 import '../utils/app_style.dart';
 import '../utils/formatters.dart';
 
-class _ReceiptInfo {
+class _StoredImageInfo {
   final File file;
   final int bytes;
   final DateTime date;
   final bool used;
+  final List<String> usages;
 
-  const _ReceiptInfo({
+  const _StoredImageInfo({
     required this.file,
     required this.bytes,
     required this.date,
     required this.used,
+    this.usages = const [],
   });
 }
 
-String _formatBytes(int bytes) {
-  if (bytes >= 1024 * 1024) {
-    return '${(bytes / (1024 * 1024)).toStringAsFixed(2)} MB';
-  }
-  return '${(bytes / 1024).round()} KB';
-}
-
-/// Kelola semua foto struk: liat, cek ukuran, hapus biar ga numpuk.
+/// Kelola foto struk atau ikon custom tanpa menduplikasi tampilan.
 class ReceiptsScreen extends StatefulWidget {
-  const ReceiptsScreen({super.key});
+  const ReceiptsScreen({super.key}) : icons = false;
+  const ReceiptsScreen.icons({super.key}) : icons = true;
+
+  final bool icons;
 
   @override
   State<ReceiptsScreen> createState() => _ReceiptsScreenState();
 }
 
 class _ReceiptsScreenState extends State<ReceiptsScreen> {
-  List<_ReceiptInfo>? _receipts;
+  List<_StoredImageInfo>? _items;
 
   @override
   void initState() {
@@ -49,41 +47,53 @@ class _ReceiptsScreenState extends State<ReceiptsScreen> {
 
   Future<void> _load() async {
     final dir = await getApplicationDocumentsDirectory();
-    final strukDir = Directory('${dir.path}/struk');
-    if (!await strukDir.exists()) {
-      if (mounted) setState(() => _receipts = []);
+    final imageDir = Directory(
+      '${dir.path}/${widget.icons ? 'custom_icons' : 'struk'}',
+    );
+    if (!await imageDir.exists()) {
+      if (mounted) setState(() => _items = []);
       return;
     }
-    final used = await DatabaseHelper.instance.usedReceiptPaths();
-    final infos = <_ReceiptInfo>[];
-    await for (final entity in strukDir.list()) {
+    final iconUsages = widget.icons
+        ? await DatabaseHelper.instance.customIconUsages()
+        : const <String, List<String>>{};
+    final used = widget.icons
+        ? iconUsages.keys.toSet()
+        : await DatabaseHelper.instance.usedReceiptPaths();
+    final infos = <_StoredImageInfo>[];
+    await for (final entity in imageDir.list()) {
       if (entity is! File) continue;
       final stat = await entity.stat();
-      // Nama file = timestamp pas foto diambil
-      final name = entity.uri.pathSegments.last.split('.').first;
+      final name = entity.uri.pathSegments.last
+          .split('.')
+          .first
+          .replaceFirst('icon_', '');
       final ts = int.tryParse(name);
       infos.add(
-        _ReceiptInfo(
+        _StoredImageInfo(
           file: entity,
           bytes: stat.size,
           date: ts != null
-              ? DateTime.fromMillisecondsSinceEpoch(ts)
+              ? widget.icons
+                    ? DateTime.fromMicrosecondsSinceEpoch(ts)
+                    : DateTime.fromMillisecondsSinceEpoch(ts)
               : stat.modified,
           used: used.contains(entity.path),
+          usages: iconUsages[entity.path] ?? const [],
         ),
       );
     }
     infos.sort((a, b) => b.date.compareTo(a.date));
-    if (mounted) setState(() => _receipts = infos);
+    if (mounted) setState(() => _items = infos);
   }
 
-  Future<void> _delete(_ReceiptInfo receipt) async {
+  Future<void> _delete(_StoredImageInfo item) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Hapus foto ini?'),
         content: Text(
-          receipt.used
+          item.used
               ? 'Foto ini masih nempel di transaksi — transaksinya tetep '
                     'aman, cuma fotonya yang ilang.'
               : 'Foto ini udah ga dipakai transaksi manapun.',
@@ -101,16 +111,15 @@ class _ReceiptsScreenState extends State<ReceiptsScreen> {
       ),
     );
     if (confirmed != true) return;
-    await DatabaseHelper.instance.clearReceiptPath(receipt.file.path);
-    if (await receipt.file.exists()) await receipt.file.delete();
+    await DatabaseHelper.instance.clearReceiptPath(item.file.path);
+    if (await item.file.exists()) await item.file.delete();
     if (!mounted) return;
-    // Refresh list transaksi biar foto yang ilang ga direferensiin lagi
     await context.read<TransactionProvider>().load();
     await _load();
   }
 
-  Future<void> _deleteUnused(List<_ReceiptInfo> receipts) async {
-    final unused = receipts.where((receipt) => !receipt.used).toList();
+  Future<void> _deleteUnused(List<_StoredImageInfo> items) async {
+    final unused = items.where((item) => !item.used).toList();
     if (unused.isEmpty) return;
     final confirmed = await showDialog<bool>(
       context: context,
@@ -130,18 +139,18 @@ class _ReceiptsScreenState extends State<ReceiptsScreen> {
       ),
     );
     if (confirmed != true) return;
-    for (final receipt in unused) {
-      if (await receipt.file.exists()) await receipt.file.delete();
+    for (final item in unused) {
+      if (await item.file.exists()) await item.file.delete();
     }
     await _load();
   }
 
-  void _preview(_ReceiptInfo receipt) {
+  void _preview(_StoredImageInfo item) {
     showDialog(
       context: context,
       builder: (_) => Dialog(
         child: InteractiveViewer(
-          child: Image.file(receipt.file, cacheWidth: 1200),
+          child: Image.file(item.file, cacheWidth: 1200),
         ),
       ),
     );
@@ -149,18 +158,22 @@ class _ReceiptsScreenState extends State<ReceiptsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final receipts = _receipts;
-    final totalBytes = receipts?.fold<int>(0, (sum, r) => sum + r.bytes) ?? 0;
+    final items = _items;
+    final totalBytes =
+        items?.fold<int>(0, (sum, item) => sum + item.bytes) ?? 0;
     final muted = Theme.of(context).colorScheme.onSurfaceVariant;
+    final noun = widget.icons ? 'ikon' : 'foto';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Foto Struk')),
-      body: receipts == null
+      appBar: AppBar(title: Text(widget.icons ? 'Ikon Custom' : 'Foto Struk')),
+      body: items == null
           ? const Center(child: CircularProgressIndicator())
-          : receipts.isEmpty
+          : items.isEmpty
           ? Center(
               child: Text(
-                'Belum ada foto struk tersimpan',
+                widget.icons
+                    ? 'Belum ada ikon custom tersimpan'
+                    : 'Belum ada foto struk tersimpan',
                 style: TextStyle(color: muted),
               ),
             )
@@ -170,17 +183,23 @@ class _ReceiptsScreenState extends State<ReceiptsScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
                   child: Row(
                     children: [
-                      Icon(Icons.sd_storage_outlined, size: 16, color: muted),
+                      Icon(
+                        widget.icons
+                            ? Icons.image_outlined
+                            : Icons.sd_storage_outlined,
+                        size: 16,
+                        color: muted,
+                      ),
                       const SizedBox(width: 6),
                       Text(
-                        '${receipts.length} foto • total '
-                        '${_formatBytes(totalBytes)}',
+                        '${items.length} $noun • total '
+                        '${formatFileSize(totalBytes)}',
                         style: TextStyle(fontSize: 13, color: muted),
                       ),
                       const Spacer(),
-                      if (receipts.any((receipt) => !receipt.used))
+                      if (!widget.icons && items.any((item) => !item.used))
                         TextButton(
-                          onPressed: () => _deleteUnused(receipts),
+                          onPressed: () => _deleteUnused(items),
                           child: const Text('Bersihkan'),
                         ),
                     ],
@@ -189,9 +208,16 @@ class _ReceiptsScreenState extends State<ReceiptsScreen> {
                 Expanded(
                   child: ListView.builder(
                     padding: const EdgeInsets.all(16),
-                    itemCount: receipts.length,
+                    itemCount: items.length,
                     itemBuilder: (context, index) {
-                      final receipt = receipts[index];
+                      final item = items[index];
+                      final status = widget.icons
+                          ? item.usages.isEmpty
+                                ? 'tidak dipakai'
+                                : item.usages.join(' • ')
+                          : item.used
+                          ? 'dipakai transaksi'
+                          : 'ga kepakai';
                       return Container(
                         margin: const EdgeInsets.only(bottom: 8),
                         decoration: BoxDecoration(
@@ -200,44 +226,45 @@ class _ReceiptsScreenState extends State<ReceiptsScreen> {
                           boxShadow: cardShadow(context),
                         ),
                         child: ListTile(
-                          onTap: () => _preview(receipt),
+                          onTap: () => _preview(item),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
                           leading: ClipRRect(
                             borderRadius: BorderRadius.circular(8),
                             child: Image.file(
-                              receipt.file,
+                              item.file,
                               width: 48,
                               height: 48,
-                              fit: BoxFit.cover,
+                              fit: widget.icons ? BoxFit.contain : BoxFit.cover,
                               // cacheWidth: decode kecil aja buat
                               // thumbnail, ga usah full resolusi
                               cacheWidth: 120,
                             ),
                           ),
                           title: Text(
-                            tanggalPendek(receipt.date),
+                            tanggalPendek(item.date),
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                           subtitle: Text(
-                            '${_formatBytes(receipt.bytes)} • '
-                            '${receipt.used ? 'dipakai transaksi' : 'ga kepakai'}',
+                            '${formatFileSize(item.bytes)} • $status',
                             style: TextStyle(
                               fontSize: 12,
-                              color: receipt.used
+                              color: item.used
                                   ? muted
                                   : const Color(0xFFFFA726),
                             ),
                           ),
-                          trailing: IconButton(
-                            tooltip: 'Hapus foto',
-                            icon: const Icon(Icons.delete_outline),
-                            onPressed: () => _delete(receipt),
-                          ),
+                          trailing: widget.icons
+                              ? null
+                              : IconButton(
+                                  tooltip: 'Hapus $noun',
+                                  icon: const Icon(Icons.delete_outline),
+                                  onPressed: () => _delete(item),
+                                ),
                         ),
                       );
                     },

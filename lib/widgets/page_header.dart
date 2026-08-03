@@ -10,18 +10,22 @@ class PageHeader extends StatelessWidget {
   final Widget? action;
 
   final int artworkTile;
+  final int headerIndex;
 
   const PageHeader({
     super.key,
     required this.title,
     this.action,
     this.artworkTile = 0,
+    required this.headerIndex,
   });
 
   @override
   Widget build(BuildContext context) {
-    final themeId = context.watch<SettingsProvider>().preset.id;
-    final artworkSize = const {'jjk', 'frieren'}.contains(themeId)
+    final settings = context.watch<SettingsProvider>();
+    final artworkSize = settings.headerArtwork(headerIndex) != null
+        ? 44.0
+        : const {'jjk', 'frieren'}.contains(settings.preset.id)
         ? 60.0
         : 36.0;
     return Padding(
@@ -40,7 +44,11 @@ class PageHeader extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              ThemeArtwork(tile: artworkTile, size: artworkSize),
+              ThemeArtwork(
+                tile: artworkTile,
+                size: artworkSize,
+                headerIndex: headerIndex,
+              ),
             ],
           ),
           // Placeholder setinggi IconButton biar semua header sama tinggi

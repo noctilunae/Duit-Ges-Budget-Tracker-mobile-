@@ -22,6 +22,10 @@ String jamPendek(DateTime date) => DateFormat('HH:mm').format(date);
 
 String bulanPendek(DateTime date) => DateFormat('MMM', 'id_ID').format(date);
 
+String formatFileSize(int bytes) => bytes >= 1024 * 1024
+    ? '${(bytes / (1024 * 1024)).toStringAsFixed(2)} MB'
+    : '${(bytes / 1024).round()} KB';
+
 /// Nyegat ketikan di TextField dan otomatis nyisipin titik ribuan
 /// gaya Indonesia: ngetik 50000 → tampil 50.000.
 class RibuanInputFormatter extends TextInputFormatter {

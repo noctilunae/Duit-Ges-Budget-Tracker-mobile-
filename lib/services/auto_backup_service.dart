@@ -36,6 +36,7 @@ class AutoBackupService {
           '-${now.day.toString().padLeft(2, '0')}';
       await DatabaseHelper.instance.backupTo(
         '${dir.path}/duit_ges_auto_$stamp.duitges',
+        includeReceipts: prefs.getBool('autoBackupIncludePhotos') ?? true,
       );
       await _prune(dir);
       await prefs.setString('lastAutoBackup', now.toIso8601String());

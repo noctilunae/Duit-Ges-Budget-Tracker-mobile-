@@ -76,7 +76,7 @@ branch itu. Jalankan hanya jika varian Lite memang sudah tidak diperlukan.
 
 ### Instalasi Android
 
-Biarkan `applicationId` tetap `com.noctilune.duitnia` bila APK Lite dimaksudkan
+Biarkan `applicationId` tetap `com.noctilune.duitges` bila APK Lite dimaksudkan
 sebagai pengganti APK penuh di HP yang sama; data lokal dan backup tetap
 kompatibel. Jika Full dan Lite harus terpasang bersamaan, gunakan
 `applicationId` serta nama aplikasi berbeda dan perlakukan datanya sebagai dua

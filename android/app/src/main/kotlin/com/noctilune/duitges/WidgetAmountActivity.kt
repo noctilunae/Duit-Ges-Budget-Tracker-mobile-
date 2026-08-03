@@ -1,4 +1,4 @@
-package com.noctilune.duitnia
+package com.noctilune.duitges
 
 import android.app.Activity
 import android.app.Dialog

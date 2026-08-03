@@ -6,6 +6,8 @@ import '../models/wallet.dart';
 import '../providers/wallet_provider.dart';
 import '../utils/app_style.dart';
 import '../utils/formatters.dart';
+import '../utils/stored_icon.dart';
+import '../widgets/custom_image_icon_picker.dart';
 
 /// Layar kelola dompet: tambah, edit, hapus.
 class WalletsScreen extends StatelessWidget {
@@ -140,6 +142,12 @@ class _WalletSheetState extends State<_WalletSheet> {
       ).showSnackBar(const SnackBar(content: Text('Masukkan satu emoji')));
       return;
     }
+    if (_iconKey.startsWith('image:') && !isValidStoredImageIcon(_iconKey)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pilih gambar ikon terlebih dahulu')),
+      );
+      return;
+    }
     final wallet = Wallet(
       id: widget.existing?.id,
       name: name,
@@ -215,14 +223,26 @@ class _WalletSheetState extends State<_WalletSheet> {
                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 8),
-              SegmentedButton<bool>(
+              SegmentedButton<String>(
                 segments: const [
-                  ButtonSegment(value: false, label: Text('Ikon warna')),
-                  ButtonSegment(value: true, label: Text('Emoji')),
+                  ButtonSegment(value: 'icon', label: Text('Ikon')),
+                  ButtonSegment(value: 'emoji', label: Text('Emoji')),
+                  ButtonSegment(value: 'image', label: Text('PNG/JPG')),
                 ],
-                selected: {_iconKey.startsWith('emoji:')},
+                selected: {
+                  _iconKey.startsWith('emoji:')
+                      ? 'emoji'
+                      : _iconKey.startsWith('image:')
+                      ? 'image'
+                      : 'icon',
+                },
                 onSelectionChanged: (value) => setState(() {
-                  _iconKey = value.first ? 'emoji:' : 'cash';
+                  _iconKey = switch (value.first) {
+                    'emoji' => 'emoji:',
+                    'image' =>
+                      _iconKey.startsWith('image:') ? _iconKey : 'image:',
+                    _ => 'cash',
+                  };
                 }),
               ),
               const SizedBox(height: 8),
@@ -237,6 +257,12 @@ class _WalletSheetState extends State<_WalletSheet> {
                     hintText: '🦆',
                     helperText: 'Masukkan satu emoji dari keyboard HP',
                   ),
+                )
+              else if (_iconKey.startsWith('image:'))
+                CustomImageIconPicker(
+                  iconKey: _iconKey,
+                  fallbackKey: 'cash',
+                  onChanged: (value) => setState(() => _iconKey = value),
                 )
               else
                 GridView.count(

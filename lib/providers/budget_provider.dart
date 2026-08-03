@@ -13,17 +13,21 @@ class BudgetProvider extends ChangeNotifier {
 
   Future<void> load({bool applyRules = true}) async {
     if (applyRules) await _db.applySalaryAllocations();
-    _budgets = await _db.budgets();
+    _budgets = (await _db.budgets())
+        .where((budget) => budget.amount > 0)
+        .toList();
     notifyListeners();
   }
 
   Future<void> saveBudget(Budget budget) async {
     await _db.saveBudget(budget);
+    await _db.cleanupUnusedCustomIcons();
     await load();
   }
 
   Future<void> removeBudget(String id) async {
     await _db.deleteBudget(id);
+    await _db.cleanupUnusedCustomIcons();
     await load();
   }
 }

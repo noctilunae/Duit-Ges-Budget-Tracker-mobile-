@@ -1,12 +1,18 @@
 import 'dart:async' show unawaited;
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/category.dart' show categoryColorChoices;
+import '../models/custom_template.dart';
+import '../models/theme_customization.dart';
 import '../services/widget_service.dart';
+import '../utils/stored_icon.dart';
+import '../utils/theme_icon_media.dart';
 
 /// Pilihan gaya desain kartu total saldo di home.
 enum CardStyle {
@@ -63,10 +69,12 @@ enum FrierenRialBackground {
 
 /// Pilihan font tampilan app — semua dibundel lokal (offline).
 enum AppFont {
-  jakarta('PlusJakartaSans', 'Jakarta Sans', ''),
-  fredoka('Fredoka', 'Fredoka', ''),
-  baloo('Baloo2', 'Baloo 2', ''),
-  quicksand('Quicksand', 'Quicksand', '');
+  jakarta('PlusJakartaSans', 'Jakarta Sans', 'Rapi'),
+  fredoka('Fredoka', 'Fredoka', 'Bulat'),
+  baloo('Baloo2', 'Baloo 2', 'Ceria'),
+  quicksand('Quicksand', 'Quicksand', 'Lembut'),
+  mali('Mali', 'Mali', 'Manis'),
+  chewy('Chewy', 'Chewy', 'Gemoy');
 
   final String family;
   final String label;
@@ -186,7 +194,7 @@ class ThemePreset {
   });
 }
 
-final themePresets = [
+final _allThemePresets = [
   ThemePreset(
     id: 'klasik',
     name: 'Klasik',
@@ -194,6 +202,24 @@ final themePresets = [
     defaultAccent: const Color(0xFF2E5BFF),
     lightBackground: const [Color(0xFFF4F7FF), Color(0xFFE9EFFD)],
     darkBackground: const [Color(0xFF0E1322), Color(0xFF141B30)],
+  ),
+  ThemePreset(
+    id: 'sage',
+    name: 'Sage',
+    icon: Icons.eco_outlined,
+    showMascotIcon: false,
+    defaultAccent: const Color(0xFF52796F),
+    lightBackground: const [Color(0xFFF5F7F2), Color(0xFFE4EBE1)],
+    darkBackground: const [Color(0xFF111916), Color(0xFF1A2823)],
+  ),
+  ThemePreset(
+    id: 'senja',
+    name: 'Senja',
+    icon: Icons.wb_twilight_outlined,
+    showMascotIcon: false,
+    defaultAccent: const Color(0xFFC65D3B),
+    lightBackground: const [Color(0xFFFFF7F2), Color(0xFFF7E2D7)],
+    darkBackground: const [Color(0xFF211411), Color(0xFF32201A)],
   ),
   ThemePreset(
     id: 'kucing',
@@ -508,26 +534,16 @@ final themePresets = [
   ),
 ];
 
+const _liteThemeIds = {'kucing', 'bebek', 'call_duck'};
+final themePresets = appFlavor == 'lite'
+    ? _allThemePresets
+          .where((theme) => _liteThemeIds.contains(theme.id))
+          .toList()
+    : _allThemePresets;
+
 class SettingsProvider extends ChangeNotifier {
   static const _privacyChannel = MethodChannel('duit_ges/privacy');
-  static const presetColors = [
-    Color(0xFF2E5BFF), // biru electric (default)
-    Color(0xFF7C4DFF), // ungu
-    Color(0xFF00B8D9), // cyan
-    Color(0xFF8DB7D8), // soft blue
-    Color(0xFFB7A6D9), // soft lavender
-    Color(0xFFD99AA5), // dusty rose
-    Color(0xFF9BB89C), // sage
-    Color(0xFF00C48C), // mint
-    Color(0xFFFF9F1C), // oranye
-    Color(0xFFFF6B6B), // coral
-    Color(0xFFF72585), // pink
-    Color(0xFF3A0CA3), // indigo gelap
-    Color(0xFFFFD60A), // kuning
-    Color(0xFF4CC9F0), // sky blue
-    Color(0xFF6A4C93), // ungu tua
-    Color(0xFF4A6741), // hijau tua
-  ];
+  static const presetColors = categoryColorChoices;
 
   Color _accent = const Color(0xFF2E5BFF);
   // Tab bottom-nav yang lagi aktif (0=Home, 1=Budget, 2=Statistik,
@@ -549,22 +565,126 @@ class SettingsProvider extends ChangeNotifier {
   bool _unlocked = false;
   bool _ready = false;
   bool _hideBalance = false;
+  bool _hideWidgetBalance = false;
   bool _hideWallets = false;
   bool _privacyMode = false;
   bool _reminderEnabled = false;
   TimeOfDay _reminderTime = const TimeOfDay(hour: 20, minute: 0);
   bool _autoBackupEnabled = false;
+  bool _autoBackupIncludePhotos = true;
   bool _externalBackupReminderEnabled = false;
   int _failedPinAttempts = 0;
   DateTime? _pinLockedUntil;
+  List<CustomTemplate> _customTemplates = [];
+  Map<String, String> _customCardIds = {};
+  Map<String, String> _customBackgroundIds = {};
+  Map<String, ThemeCustomization> _themeCustomizations = {};
+  List<CustomThemeProfile> _customThemes = [
+    const CustomThemeProfile(id: 'custom', name: 'Custom'),
+  ];
 
   bool get hideBalance => _hideBalance;
+  bool get hideWidgetBalance => _hideWidgetBalance;
   bool get hideWallets => _hideWallets;
   bool get privacyMode => _privacyMode;
   bool get reminderEnabled => _reminderEnabled;
   TimeOfDay get reminderTime => _reminderTime;
   bool get autoBackupEnabled => _autoBackupEnabled;
+  bool get autoBackupIncludePhotos => _autoBackupIncludePhotos;
   bool get externalBackupReminderEnabled => _externalBackupReminderEnabled;
+  List<CustomTemplate> get customTemplates =>
+      List.unmodifiable(_customTemplates);
+  List<CustomThemeProfile> get customThemes => List.unmodifiable(_customThemes);
+  CustomThemeProfile? get activeCustomTheme => customThemeById(_themeId);
+  CustomThemeProfile? customThemeById(String id) {
+    for (final profile in _customThemes) {
+      if (profile.id == id) return profile;
+    }
+    return null;
+  }
+
+  ThemePreset _customPreset(CustomThemeProfile profile) => ThemePreset(
+    id: profile.id,
+    name: profile.name,
+    icon: Icons.tune,
+    showMascotIcon: false,
+    defaultAccent: const Color(0xFF6750A4),
+    lightBackground: const [Color(0xFFF8F7FC), Color(0xFFECE8F5)],
+    darkBackground: const [Color(0xFF141218), Color(0xFF211E27)],
+  );
+
+  List<ThemePreset> get availableThemes => [
+    ...themePresets,
+    ..._customThemes.map(_customPreset),
+  ];
+  CustomTemplate? get customCard => _customById(_customCardIds[preset.id]);
+  CustomTemplate? get customBackground =>
+      _customById(_customBackgroundIds[preset.id]);
+  ThemeCustomization get themeCustomization =>
+      _themeCustomizations[preset.id] ?? const ThemeCustomization();
+  Offset get fabPlusOffset =>
+      Offset(themeCustomization.plusX, themeCustomization.plusY);
+  String? themeArtwork(int tile) => themeCustomization.artwork[tile];
+  String? _themeIcon(String slot, String? legacy) {
+    final icons = themeCustomization.icons;
+    if (!icons.containsKey(slot)) return legacy;
+    final value = icons[slot]!;
+    return value.isEmpty ? null : value;
+  }
+
+  String? headerArtwork(int index) {
+    final legacy = switch (index) {
+      0 => themeArtwork(1),
+      1 => themeArtwork(7) ?? themeArtwork(4) ?? themeArtwork(11),
+      2 => themeArtwork(8),
+      3 => themeArtwork(3),
+      _ => null,
+    };
+    return _themeIcon('header_$index', legacy);
+  }
+
+  int _legacyFooterTile(int index) => switch (index) {
+    0 =>
+      preset.id == 'frieren'
+          ? 2
+          : preset.id == 'jjk'
+          ? 10
+          : 6,
+    1 =>
+      const {'frieren', 'jjk', 'spongebob', 'jjk2'}.contains(preset.id) ? 5 : 7,
+    2 =>
+      const {'frieren', 'jjk', 'spongebob', 'jjk2'}.contains(preset.id) ? 9 : 8,
+    3 =>
+      preset.id == 'frieren'
+          ? 12
+          : preset.id == 'jjk'
+          ? 13
+          : preset.id == 'spongebob'
+          ? 14
+          : preset.id == 'jjk2'
+          ? 15
+          : 3,
+    _ => -1,
+  };
+
+  String? footerArtwork(int index) {
+    final tile = _legacyFooterTile(index);
+    return _themeIcon(
+      'footer_$index',
+      themeCustomization.footerArtwork[index] ??
+          (tile >= 0 ? themeArtwork(tile) : null),
+    );
+  }
+
+  String? get cardMascotArtwork => _themeIcon('card_mascot', themeArtwork(0));
+  bool get hasCustomCardMascot =>
+      themeCustomization.icons['card_mascot']?.isNotEmpty == true;
+  String? get addTransactionArtwork =>
+      _themeIcon('add_transaction', themeArtwork(0));
+  bool get hasAnimatedCustomFooter => List.generate(
+    4,
+    footerArtwork,
+  ).any((key) => isThemeGif(key) || isThemeVideo(key));
   Duration get pinCooldown {
     final remaining = _pinLockedUntil?.difference(DateTime.now());
     return remaining != null && !remaining.isNegative
@@ -572,7 +692,11 @@ class SettingsProvider extends ChangeNotifier {
         : Duration.zero;
   }
 
-  Color get accent => preset.tabAccents?[_activeTab] ?? _accent;
+  Color pageAccent(int page) =>
+      themeCustomization.pageColor(page) ?? preset.tabAccents?[page] ?? _accent;
+  bool hasCustomPageColor(int page) =>
+      themeCustomization.pageColor(page) != null;
+  Color get accent => pageAccent(_activeTab);
   bool get darkMode => _darkMode;
 
   /// Dipanggil MainShell tiap pindah tab bottom-nav. No-op kalau tema
@@ -580,20 +704,29 @@ class SettingsProvider extends ChangeNotifier {
   void setActiveTab(int index) {
     if (_activeTab == index) return;
     _activeTab = index;
-    if (preset.tabAccents != null) notifyListeners();
+    if (preset.tabAccents != null || _themeCustomizations.isNotEmpty) {
+      notifyListeners();
+    }
   }
 
   CardStyle get cardStyle => _cardStyle;
   FrierenRialBackground get frierenRialBackground => _frierenRialBackground;
+  FrierenRialBackground get themeBackground => preset.id == 'frieren_rial'
+      ? _frierenRialBackground
+      : FrierenRialBackground.defaultBackground;
+  List<FrierenRialBackground> get themeBackgrounds =>
+      preset.id == 'frieren_rial'
+      ? FrierenRialBackground.values
+      : const [FrierenRialBackground.defaultBackground];
   int get monthStartDay => _monthStartDay;
   int get trendMonths => _trendMonths;
   AppFont get font => _font;
   double get textScale => _textScale;
   bool get ready => _ready;
 
-  ThemePreset get preset => themePresets.firstWhere(
+  ThemePreset get preset => availableThemes.firstWhere(
     (t) => t.id == _themeId,
-    orElse: () => themePresets.first,
+    orElse: () => availableThemes.first,
   );
 
   ThemeTone? get tone {
@@ -605,14 +738,39 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   String? get artwork => tone?.artwork ?? preset.artwork;
-  List<Color> get lightBackground =>
-      preset.tabLightBackgrounds?[_activeTab] ??
-      tone?.lightBackground ??
-      preset.lightBackground;
-  List<Color> get darkBackground =>
-      preset.tabDarkBackgrounds?[_activeTab] ??
-      tone?.darkBackground ??
-      preset.darkBackground;
+  List<Color> _customBackground(Color color, bool dark) {
+    final hsl = HSLColor.fromColor(color);
+    return dark
+        ? [hsl.withLightness(0.09).toColor(), hsl.withLightness(0.17).toColor()]
+        : [
+            hsl
+                .withSaturation(hsl.saturation * 0.45)
+                .withLightness(0.97)
+                .toColor(),
+            hsl
+                .withSaturation(hsl.saturation * 0.55)
+                .withLightness(0.9)
+                .toColor(),
+          ];
+  }
+
+  List<Color> get lightBackground {
+    final color = themeCustomization.pageColor(_activeTab);
+    return color != null
+        ? _customBackground(color, false)
+        : preset.tabLightBackgrounds?[_activeTab] ??
+              tone?.lightBackground ??
+              preset.lightBackground;
+  }
+
+  List<Color> get darkBackground {
+    final color = themeCustomization.pageColor(_activeTab);
+    return color != null
+        ? _customBackground(color, true)
+        : preset.tabDarkBackgrounds?[_activeTab] ??
+              tone?.darkBackground ??
+              preset.darkBackground;
+  }
 
   /// Versi lebih terang dari warna aksen, buat ujung atas gradient.
   Color get accentBright {
@@ -628,7 +786,27 @@ class SettingsProvider extends ChangeNotifier {
 
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
+    final savedCustomThemes = prefs.getString('customThemeProfiles');
+    if (savedCustomThemes != null) {
+      try {
+        _customThemes = (jsonDecode(savedCustomThemes) as List)
+            .map(
+              (item) => CustomThemeProfile.fromMap(
+                Map<String, Object?>.from(item as Map),
+              ),
+            )
+            .toList();
+      } catch (_) {
+        _customThemes = [
+          const CustomThemeProfile(id: 'custom', name: 'Custom'),
+        ];
+      }
+    }
     _themeId = prefs.getString('themeId') ?? 'klasik';
+    if (!availableThemes.any((theme) => theme.id == _themeId)) {
+      _themeId = themePresets.first.id;
+      await prefs.setString('themeId', _themeId);
+    }
     _toneId =
         prefs.getString('themeTone_${preset.id}') ??
         (preset.tones.isEmpty ? null : preset.tones.first.id);
@@ -670,6 +848,7 @@ class SettingsProvider extends ChangeNotifier {
     _textScale = (prefs.getDouble('textScale') ?? 1).clamp(0.8, 1.4);
     _pinHash = prefs.getString('pinHash');
     _hideBalance = prefs.getBool('hideBalance') ?? false;
+    _hideWidgetBalance = prefs.getBool('hideWidgetBalance') ?? false;
     _hideWallets = prefs.getBool('hideWallets') ?? false;
     _privacyMode = prefs.getBool('privacyMode') ?? false;
     unawaited(_applyPrivacyMode(_privacyMode));
@@ -679,12 +858,55 @@ class SettingsProvider extends ChangeNotifier {
       minute: prefs.getInt('reminderMinute') ?? 0,
     );
     _autoBackupEnabled = prefs.getBool('autoBackupEnabled') ?? false;
+    _autoBackupIncludePhotos = prefs.getBool('autoBackupIncludePhotos') ?? true;
     _externalBackupReminderEnabled =
         prefs.getBool('externalBackupReminderEnabled') ?? false;
     _failedPinAttempts = prefs.getInt('failedPinAttempts') ?? 0;
     _pinLockedUntil = DateTime.tryParse(
       prefs.getString('pinLockedUntil') ?? '',
     );
+    try {
+      _customTemplates =
+          (jsonDecode(prefs.getString('customTemplates') ?? '[]') as List)
+              .map(
+                (item) => CustomTemplate.fromMap(
+                  Map<String, Object?>.from(item as Map),
+                ),
+              )
+              .toList();
+    } catch (_) {
+      _customTemplates = [];
+    }
+    Map<String, String> selectedTemplates(String key, String legacyKey) {
+      final encoded = prefs.getString(key);
+      if (encoded != null) {
+        try {
+          return Map<String, String>.from(jsonDecode(encoded) as Map);
+        } catch (_) {
+          // Format rusak jatuh ke key legacy di bawah.
+        }
+      }
+      final legacy = prefs.getString(legacyKey);
+      return legacy == null ? {} : {_themeId: legacy};
+    }
+
+    _customCardIds = selectedTemplates('customCardIdsByTheme', 'customCardId');
+    _customBackgroundIds = selectedTemplates(
+      'customBackgroundIdsByTheme',
+      'customBackgroundId',
+    );
+    try {
+      final saved =
+          jsonDecode(prefs.getString('themeCustomizations') ?? '{}') as Map;
+      _themeCustomizations = saved.map(
+        (key, value) => MapEntry(
+          '$key',
+          ThemeCustomization.fromMap(Map<String, Object?>.from(value as Map)),
+        ),
+      );
+    } catch (_) {
+      _themeCustomizations = {};
+    }
     _ready = true;
     notifyListeners();
     _syncWidget();
@@ -709,6 +931,13 @@ class SettingsProvider extends ChangeNotifier {
     await prefs.setBool('autoBackupEnabled', enabled);
   }
 
+  Future<void> setAutoBackupIncludePhotos(bool enabled) async {
+    _autoBackupIncludePhotos = enabled;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('autoBackupIncludePhotos', enabled);
+  }
+
   Future<void> setExternalBackupReminder(bool enabled) async {
     _externalBackupReminderEnabled = enabled;
     notifyListeners();
@@ -723,6 +952,14 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('hideBalance', value);
+    unawaited(WidgetService.update());
+  }
+
+  Future<void> setHideWidgetBalance(bool value) async {
+    _hideWidgetBalance = value;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('hideWidgetBalance', value);
     unawaited(WidgetService.update());
   }
 
@@ -815,6 +1052,98 @@ class SettingsProvider extends ChangeNotifier {
     _syncWidget();
   }
 
+  Future<void> addCustomTheme(String name) async {
+    final clean = name.trim();
+    if (clean.isEmpty) return;
+    final profile = CustomThemeProfile(
+      id: 'custom_${DateTime.now().microsecondsSinceEpoch}',
+      name: clean.length > 30 ? clean.substring(0, 30) : clean,
+    );
+    _customThemes.add(profile);
+    await _saveCustomThemes();
+    await setTheme(_customPreset(profile));
+  }
+
+  Future<void> renameCustomTheme(String id, String name) async {
+    final clean = name.trim();
+    final index = _customThemes.indexWhere((theme) => theme.id == id);
+    if (index < 0 || clean.isEmpty) return;
+    _customThemes[index] = _customThemes[index].copyWith(
+      name: clean.length > 30 ? clean.substring(0, 30) : clean,
+    );
+    await _saveCustomThemes();
+  }
+
+  Future<void> setCustomThemeIcon(String id, String? iconKey) async {
+    final index = _customThemes.indexWhere((theme) => theme.id == id);
+    if (index < 0) return;
+    final current = _customThemes[index];
+    final oldImage = parseStoredImageIcon(current.iconKey ?? '');
+    _customThemes[index] = CustomThemeProfile(
+      id: current.id,
+      name: current.name,
+      iconKey: iconKey,
+      previewSeconds: current.previewSeconds,
+    );
+    await _saveCustomThemes();
+    final oldPath = oldImage?.path ?? themeIconPath(current.iconKey);
+    final newPath = themeIconPath(iconKey);
+    if (oldPath != null && oldPath != newPath) {
+      File(oldPath).delete().ignore();
+      File('$oldPath.preview.png').delete().ignore();
+    }
+  }
+
+  Future<void> setCustomThemePreviewSeconds(String id, int seconds) async {
+    final index = _customThemes.indexWhere((theme) => theme.id == id);
+    if (index < 0) return;
+    _customThemes[index] = _customThemes[index].copyWith(
+      previewSeconds: seconds.clamp(1, 5),
+    );
+    await _saveCustomThemes();
+  }
+
+  Future<void> deleteCustomTheme(String id) async {
+    final profile = customThemeById(id);
+    if (profile == null) return;
+    final customization = _themeCustomizations[id];
+    _customThemes.removeWhere((theme) => theme.id == id);
+    _themeCustomizations.remove(id);
+    _customCardIds.remove(id);
+    _customBackgroundIds.remove(id);
+    if (_themeId == id) {
+      _themeId = themePresets.first.id;
+      _toneId = null;
+      _accent = preset.defaultAccent;
+    }
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('themeId', _themeId);
+    await _saveSelectedTemplates(prefs);
+    await _saveThemeCustomizations();
+    await _saveCustomThemes();
+    final path = themeIconPath(profile.iconKey);
+    if (path != null) {
+      File(path).delete().ignore();
+      File('$path.preview.png').delete().ignore();
+    }
+    for (final key in {
+      ...?customization?.artwork.values,
+      ...?customization?.footerArtwork.values,
+      ...?customization?.icons.values,
+    }) {
+      _deleteReplacedThemeMedia(key, null);
+    }
+  }
+
+  Future<void> _saveCustomThemes() async {
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      'customThemeProfiles',
+      jsonEncode(_customThemes.map((theme) => theme.toMap()).toList()),
+    );
+  }
+
   Future<void> setTone(ThemeTone value) async {
     _toneId = value.id;
     _accent = value.accent;
@@ -846,18 +1175,95 @@ class SettingsProvider extends ChangeNotifier {
 
   Future<void> setCardStyle(CardStyle style) async {
     _cardStyle = style;
+    _customCardIds.remove(preset.id);
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('cardStyle', style.name);
+    await prefs.remove('customCardId');
+    await _saveSelectedTemplates(prefs);
   }
 
   Future<void> setFrierenRialBackground(
     FrierenRialBackground background,
   ) async {
-    _frierenRialBackground = background;
+    _customBackgroundIds.remove(preset.id);
+    if (preset.id == 'frieren_rial') _frierenRialBackground = background;
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('frierenRialBackground', background.name);
+    if (preset.id == 'frieren_rial') {
+      await prefs.setString('frierenRialBackground', background.name);
+    }
+    await prefs.remove('customBackgroundId');
+    await _saveSelectedTemplates(prefs);
+  }
+
+  CustomTemplate? _customById(String? id) {
+    if (id == null) return null;
+    for (final template in _customTemplates) {
+      if (template.id == id) return template;
+    }
+    return null;
+  }
+
+  Future<void> addCustomTemplate(CustomTemplate template) async {
+    _customTemplates.add(template);
+    await _saveCustomTemplates();
+    await selectCustomTemplate(template);
+  }
+
+  Future<void> selectCustomTemplate(CustomTemplate template) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (template.kind == CustomTemplateKind.card) {
+      _customCardIds[preset.id] = template.id;
+      await prefs.setString('customCardId', template.id);
+    } else {
+      _customBackgroundIds[preset.id] = template.id;
+      await prefs.setString('customBackgroundId', template.id);
+    }
+    await _saveSelectedTemplates(prefs);
+    notifyListeners();
+  }
+
+  Future<void> updateCustomTemplate(CustomTemplate template) async {
+    final index = _customTemplates.indexWhere((item) => item.id == template.id);
+    if (index < 0) return;
+    _customTemplates[index] = template;
+    await _saveCustomTemplates();
+    notifyListeners();
+  }
+
+  Future<void> deleteCustomTemplate(CustomTemplate template) async {
+    _customTemplates.removeWhere((item) => item.id == template.id);
+    final prefs = await SharedPreferences.getInstance();
+    if (_customCardIds.values.contains(template.id)) {
+      _customCardIds.removeWhere((_, id) => id == template.id);
+      await prefs.remove('customCardId');
+    }
+    if (_customBackgroundIds.values.contains(template.id)) {
+      _customBackgroundIds.removeWhere((_, id) => id == template.id);
+      await prefs.remove('customBackgroundId');
+    }
+    await _saveSelectedTemplates(prefs);
+    await _saveCustomTemplates();
+    final file = File(template.path);
+    if (await file.exists()) await file.delete();
+    notifyListeners();
+  }
+
+  Future<void> _saveCustomTemplates() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      'customTemplates',
+      jsonEncode(_customTemplates.map((item) => item.toMap()).toList()),
+    );
+  }
+
+  Future<void> _saveSelectedTemplates(SharedPreferences prefs) async {
+    await prefs.setString('customCardIdsByTheme', jsonEncode(_customCardIds));
+    await prefs.setString(
+      'customBackgroundIdsByTheme',
+      jsonEncode(_customBackgroundIds),
+    );
   }
 
   Future<void> setFont(AppFont value) async {
@@ -879,6 +1285,117 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('accent', color.toARGB32());
+    _syncWidget();
+  }
+
+  Future<void> setThemePageColor(int page, Color color) async {
+    if (page < 0 || page > 3 || !presetColors.contains(color)) return;
+    final current = themeCustomization;
+    _themeCustomizations[preset.id] = current.copyWith(
+      pageColors: {...current.pageColors, page: color.toARGB32()},
+    );
+    await _saveThemeCustomizations();
+  }
+
+  Future<void> setThemeArtwork(Iterable<int> tiles, String? iconKey) async {
+    final current = themeCustomization;
+    final artwork = {...current.artwork};
+    final replaced = <String>{};
+    for (final tile in tiles) {
+      if (artwork[tile] case final oldKey?) replaced.add(oldKey);
+      if (iconKey == null) {
+        artwork.remove(tile);
+      } else {
+        artwork[tile] = iconKey;
+      }
+    }
+    _themeCustomizations[preset.id] = current.copyWith(artwork: artwork);
+    await _saveThemeCustomizations();
+    for (final oldKey in replaced) {
+      if (!_themeMediaInUse(themeCustomization, oldKey)) {
+        _deleteReplacedThemeMedia(oldKey, iconKey);
+      }
+    }
+  }
+
+  Future<void> setFooterArtwork(int index, String? iconKey) async {
+    if (index < 0 || index > 3) return;
+    await _setThemeIcon('footer_$index', iconKey);
+  }
+
+  Future<void> setHeaderArtwork(int index, String? iconKey) async {
+    if (index < 0 || index > 3) return;
+    await _setThemeIcon('header_$index', iconKey);
+  }
+
+  Future<void> setCardMascotArtwork(String? iconKey) =>
+      _setThemeIcon('card_mascot', iconKey);
+
+  Future<void> setAddTransactionArtwork(String? iconKey) =>
+      _setThemeIcon('add_transaction', iconKey);
+
+  Future<void> _setThemeIcon(String slot, String? iconKey) async {
+    final current = themeCustomization;
+    final icons = {...current.icons};
+    final oldKey = icons[slot];
+    // String kosong adalah reset eksplisit agar fallback versi lama tidak
+    // muncul lagi setelah pengguna menekan Hapus.
+    icons[slot] = iconKey ?? '';
+    _themeCustomizations[preset.id] = current.copyWith(icons: icons);
+    await _saveThemeCustomizations();
+    if (oldKey != null &&
+        oldKey.isNotEmpty &&
+        !_themeMediaInUse(themeCustomization, oldKey)) {
+      _deleteReplacedThemeMedia(oldKey, iconKey);
+    }
+  }
+
+  bool _themeMediaInUse(ThemeCustomization customization, String key) {
+    final path = themeIconPath(key);
+    if (path == null) return false;
+    return {
+      ...customization.artwork.values,
+      ...customization.footerArtwork.values,
+      ...customization.icons.values,
+    }.any((value) => themeIconPath(value) == path);
+  }
+
+  void _deleteReplacedThemeMedia(String? oldKey, String? newKey) {
+    final oldPath = themeIconPath(oldKey);
+    if (oldPath == null || oldPath == themeIconPath(newKey)) return;
+    File(oldPath).delete().ignore();
+    File('$oldPath.preview.png').delete().ignore();
+  }
+
+  Future<void> setFabPlusOffset(Offset offset) async {
+    _themeCustomizations[preset.id] = themeCustomization.copyWith(
+      plusX: offset.dx.clamp(-18, 18),
+      plusY: offset.dy.clamp(-18, 18),
+    );
+    await _saveThemeCustomizations();
+  }
+
+  Future<void> resetThemeCustomization() async {
+    final customization = _themeCustomizations.remove(preset.id);
+    await _saveThemeCustomizations();
+    for (final key in {
+      ...?customization?.artwork.values,
+      ...?customization?.footerArtwork.values,
+      ...?customization?.icons.values,
+    }) {
+      _deleteReplacedThemeMedia(key, null);
+    }
+  }
+
+  Future<void> _saveThemeCustomizations() async {
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      'themeCustomizations',
+      jsonEncode(
+        _themeCustomizations.map((key, value) => MapEntry(key, value.toMap())),
+      ),
+    );
     _syncWidget();
   }
 
@@ -918,14 +1435,17 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   void _syncWidget() {
-    final background = _darkMode
+    final customColor = themeCustomization.pageColor(0);
+    final background = customColor != null
+        ? _customBackground(customColor, _darkMode)
+        : _darkMode
         ? preset.tabDarkBackgrounds?.first ??
               tone?.darkBackground ??
               preset.darkBackground
         : preset.tabLightBackgrounds?.first ??
               tone?.lightBackground ??
               preset.lightBackground;
-    final widgetAccent = preset.tabAccents?.first ?? _accent;
+    final widgetAccent = pageAccent(0);
     unawaited(
       WidgetService.update(
         syncOptions: true,

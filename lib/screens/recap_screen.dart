@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 import '../db/database_helper.dart';
 import '../models/category.dart';
 import '../models/transaction.dart';
+import '../providers/category_provider.dart';
 import '../providers/transaction_provider.dart';
 import '../services/excel_exporter.dart';
 import '../utils/app_style.dart';
@@ -85,11 +86,7 @@ class _RecapViewState extends State<RecapView> {
       isScrollControlled: true,
       useSafeArea: true,
       builder: (_) => _CategoryFilter(
-        categories: [
-          ...expenseCategories,
-          ...incomeCategories,
-          ...customCategoryRegistry.values,
-        ],
+        categories: context.read<CategoryProvider>().all,
         selected: _categoryIds,
       ),
     );
@@ -666,9 +663,14 @@ class _ReportRowState extends State<_ReportRow> {
                                 radius: 15,
                                 backgroundColor: transaction.category.color
                                     .withValues(alpha: 0.15),
-                                child: transaction.category.iconWidget(
-                                  size: 16,
-                                  color: transaction.category.color,
+                                child: SizedBox.square(
+                                  dimension: 16,
+                                  child: Center(
+                                    child: transaction.category.iconWidget(
+                                      size: 16,
+                                      color: transaction.category.color,
+                                    ),
+                                  ),
                                 ),
                               ),
                               title: Text(
@@ -786,9 +788,14 @@ class _CategoryFilterState extends State<_CategoryFilter> {
                 final category = widget.categories[index];
                 return CheckboxListTile(
                   value: _selected.contains(category.id),
-                  secondary: category.iconWidget(
-                    color: category.color,
-                    size: 24,
+                  secondary: SizedBox.square(
+                    dimension: 24,
+                    child: Center(
+                      child: category.iconWidget(
+                        color: category.color,
+                        size: 24,
+                      ),
+                    ),
                   ),
                   title: Text(category.name),
                   onChanged: (selected) => setState(() {

@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../models/category.dart';
 import '../models/transaction.dart';
 import '../providers/transaction_provider.dart';
+import '../providers/budget_provider.dart';
 import '../providers/debt_provider.dart';
 import '../providers/goal_provider.dart';
 import '../providers/wallet_provider.dart';
@@ -89,6 +90,11 @@ class TransactionDetailSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final category = transaction.category;
+    final budget = context
+        .watch<BudgetProvider>()
+        .budgets
+        .where((budget) => budget.id == transaction.budgetId)
+        .firstOrNull;
     final isIncome = transaction.type == TxType.income;
     final amountColor = isIncome ? incomeColor : expenseColor;
 
@@ -258,7 +264,10 @@ class TransactionDetailSheet extends StatelessWidget {
                       Navigator.push(
                         context,
                         slideUpRoute(
-                          AddTransactionScreen(existing: transaction),
+                          AddTransactionScreen(
+                            existing: transaction,
+                            transactionType: budget?.transactionType,
+                          ),
                         ),
                       );
                     },

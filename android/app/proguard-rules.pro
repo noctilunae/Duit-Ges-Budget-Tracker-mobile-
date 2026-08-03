@@ -13,4 +13,5 @@
 -keep class com.google.mlkit.** { *; }
 -keep class com.google.android.odml.** { *; }
 -keep class com.google.android.gms.internal.mlkit_** { *; }
+-keep class com.noctilune.duitges.FullReceiptOcr { *; }
 -keep class com.google.android.gms.vision.** { *; }

@@ -50,7 +50,7 @@ class DebtsView extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 32),
             child: Column(
               children: [
-                const ThemeArtwork(tile: 6, size: 88),
+                const ThemeArtwork(tile: 7, size: 88, headerIndex: 1),
                 const SizedBox(height: 10),
                 Text(
                   'Belum ada catatan utang/piutang.\nAman... untuk sekarang.',

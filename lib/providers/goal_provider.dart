@@ -16,11 +16,13 @@ class GoalProvider extends ChangeNotifier {
 
   Future<void> addGoal(Goal goal) async {
     await _db.insertGoal(goal);
+    await _db.cleanupUnusedCustomIcons();
     await load();
   }
 
   Future<void> updateGoal(Goal goal) async {
     await _db.updateGoal(goal);
+    await _db.cleanupUnusedCustomIcons();
     await load();
   }
 }

@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+1
+version: 1.0.0+6002
 
 environment:
   sdk: ^3.12.2
@@ -62,8 +62,8 @@ dependencies:
   timezone: ^0.11.1
   flutter_timezone: ^5.1.0
   home_widget: ^0.9.3
-  google_mlkit_text_recognition: ^0.16.0
   video_player: ^2.13.0
+  image: ^4.3.0
 
 dev_dependencies:
   flutter_test:
@@ -83,7 +83,7 @@ flutter_launcher_icons:
   android: "ic_launcher"
   ios: false
   image_path: "assets/icon/icon.png"
-  adaptive_icon_background: "#FFE080"
+  adaptive_icon_background: "#000000"
   adaptive_icon_foreground: "assets/icon/icon.png"
   adaptive_icon_foreground_inset: 16
 
@@ -92,6 +92,7 @@ flutter_launcher_icons:
 
 # The following section is specific to Flutter packages.
 flutter:
+  default-flavor: full
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
@@ -99,20 +100,34 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/theme/
+    - assets/fonts/licenses/
+    - assets/theme/paw_cat.png
+    - assets/theme/paw_duck.png
     - assets/theme/cat/
     - assets/theme/cat_blue/
     - assets/theme/cat_yellow/
     - assets/theme/duck/
     - assets/theme/duck_blue/
     - assets/theme/duck_pink/
-    - assets/theme/anya/
-    - assets/theme/jjk/
-    - assets/theme/frieren/
-    - assets/theme/frieren_rial/
-    - assets/theme/spongebob/
-    - assets/theme/jjk2/
+    - path: assets/theme/anya/
+      flavors:
+        - full
     - assets/theme/call_duck/
+    - path: assets/theme/jjk/
+      flavors:
+        - full
+    - path: assets/theme/frieren/
+      flavors:
+        - full
+    - path: assets/theme/frieren_rial/
+      flavors:
+        - full
+    - path: assets/theme/spongebob/
+      flavors:
+        - full
+    - path: assets/theme/jjk2/
+      flavors:
+        - full
 
   # Pilihan font app (bisa diganti user di Setelan) — semua variable
   # font, dibundel lokal biar full offline, ga nunggu download dari
@@ -132,3 +147,9 @@ flutter:
     - family: Quicksand
       fonts:
         - asset: assets/fonts/Quicksand.ttf
+    - family: Mali
+      fonts:
+        - asset: assets/fonts/Mali-Regular.ttf
+    - family: Chewy
+      fonts:
+        - asset: assets/fonts/Chewy-Regular.ttf

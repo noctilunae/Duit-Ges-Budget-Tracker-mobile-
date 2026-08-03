@@ -12,7 +12,8 @@ import 'package:duit_ges/models/wallet.dart';
 import 'package:duit_ges/providers/category_provider.dart';
 import 'package:duit_ges/services/excel_exporter.dart';
 import 'package:duit_ges/services/excel_importer.dart';
-import 'package:flutter/material.dart' show Color;
+import 'package:duit_ges/utils/stored_icon.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:excel/excel.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -23,6 +24,8 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 /// diexport ke .xlsx lalu diimport balik, dan tiap field dibandingkan
 /// satu-satu. Jalan di komputer pakai SQLite versi FFI (tanpa HP).
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   setUpAll(() async {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
@@ -366,7 +369,7 @@ void main() {
       ),
     );
     expect(await db.transactionCountForWallet(walletId), 1);
-    expect(await db.transactionCountForCategory(category.id), 1);
+    expect(await db.categoryUsageCount(category.id), 1);
   });
 
   test('recurring jatuh tempo membuat transaksi tepat sekali', () async {
@@ -486,7 +489,7 @@ void main() {
         'budget_id': 'budget_tabungan',
         'amount': 50000,
         'percentage': null,
-        'salary': 0,
+        'salary': 100000,
         'day': 10,
       },
     ]);
@@ -507,7 +510,59 @@ void main() {
     );
   });
 
-  test('transaksi bisa masuk pos budget tanpa bergantung kategori', () async {
+  test(
+    'edit rule gaji mengganti rule tanpa menerapkan ulang bulan sama',
+    () async {
+      final db = DatabaseHelper.instance;
+      await db.saveBudget(
+        const Budget(
+          id: 'budget_edit_rule',
+          name: 'Edit Rule',
+          iconKey: 'wallet',
+          color: Color(0xFF26A69A),
+          type: BudgetType.kebutuhan,
+          amount: 0,
+        ),
+      );
+      Map<String, Object?> rule(int amount) => {
+        'budget_id': 'budget_edit_rule',
+        'amount': amount,
+        'percentage': null,
+        'salary': 100000,
+        'day': 10,
+      };
+
+      await db.saveSalaryAllocations([rule(40000)]);
+      expect(await db.applySalaryAllocations(DateTime(2026, 10, 10)), isTrue);
+      await db.saveSalaryAllocations([rule(50000)]);
+      expect(await db.applySalaryAllocations(DateTime(2026, 10, 20)), isFalse);
+      expect(await db.applySalaryAllocations(DateTime(2026, 11, 10)), isTrue);
+      expect(
+        (await db.budgets())
+            .firstWhere((budget) => budget.id == 'budget_edit_rule')
+            .amount,
+        50000,
+      );
+    },
+  );
+
+  test('rule gaji menolak total pembagian di atas nominal gaji', () async {
+    final db = DatabaseHelper.instance;
+    expect(
+      () => db.saveSalaryAllocations([
+        {
+          'budget_id': 'budget_berlebih',
+          'amount': 110000,
+          'percentage': null,
+          'salary': 100000,
+          'day': 10,
+        },
+      ]),
+      throwsArgumentError,
+    );
+  });
+
+  test('transaksi pemasukan bisa masuk budget Tabungan', () async {
     final db = DatabaseHelper.instance;
     const budget = Budget(
       id: 'budget_bebas',
@@ -521,10 +576,10 @@ void main() {
     await db.insert(
       TransactionModel(
         amount: 25000,
-        categoryId: 'makanan',
+        categoryId: 'gaji',
         budgetId: budget.id,
         date: DateTime(2026, 8, 12),
-        type: TxType.expense,
+        type: TxType.income,
       ),
     );
     expect(
@@ -585,49 +640,155 @@ void main() {
     );
   });
 
-  test('backup terverifikasi bisa mengembalikan database', () async {
+  test('backup dan restore ribuan data tetap identik', () async {
     final db = DatabaseHelper.instance;
-    final before = (await db.all()).length;
-    final backup = File('${Directory.systemTemp.path}/duit_nia_test.duitges');
+    final documents = Directory.systemTemp.createTempSync(
+      'duit_ges_restore_docs_',
+    );
+    addTearDown(() => documents.deleteSync(recursive: true));
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('plugins.flutter.io/path_provider'),
+          (call) async => documents.path,
+        );
+    addTearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+            const MethodChannel('plugins.flutter.io/path_provider'),
+            null,
+          ),
+    );
+
+    final receiptDir = Directory('${documents.path}/struk')..createSync();
+    final expectedReceipt = List.generate(4096, (index) => index % 251);
+    final receipt = File('${receiptDir.path}/backup-proof.jpg')
+      ..writeAsBytesSync(expectedReceipt);
+    final iconDir = Directory('${documents.path}/custom_icons')..createSync();
+    final expectedIcon = List.generate(512, (index) => index % 239);
+    final icon = File('${iconDir.path}/backup-icon.png')
+      ..writeAsBytesSync(expectedIcon);
+    await db.insert(
+      TransactionModel(
+        amount: 987654,
+        categoryId: 'makanan',
+        note: 'bukti backup akurat',
+        date: DateTime(2026, 7, 23),
+        type: TxType.expense,
+        receiptPath: receipt.path,
+      ),
+    );
+
+    const tables = [
+      'transactions',
+      'budgets',
+      'wallets',
+      'goals',
+      'debts',
+      'custom_categories',
+      'recurrings',
+      'salary_allocations',
+    ];
+    final raw = await db.database;
+    await raw.update('wallets', {
+      'icon': storedImageIcon(icon.path, 1.2),
+    }, where: 'id = 1');
+    final before = <String, List<Map<String, Object?>>>{
+      for (final table in tables)
+        table: await raw.rawQuery('SELECT * FROM $table ORDER BY rowid'),
+    };
+    expect(before['transactions']!.length, greaterThan(6000));
+
+    final backup = File('${Directory.systemTemp.path}/duit_ges_test.duitges');
     await db.backupTo(backup.path);
     addTearDown(() async {
       if (await backup.exists()) await backup.delete();
     });
-    await db.insert(
-      TransactionModel(
-        amount: 12345,
-        categoryId: 'makanan',
-        date: DateTime(2026, 7, 18),
+    for (final table in tables) {
+      await raw.delete(table);
+    }
+    receipt.writeAsBytesSync([0]);
+    icon.deleteSync();
+
+    expect(await db.restoreFrom(backup.path), isTrue);
+    final restored = await db.database;
+    for (final table in tables) {
+      expect(
+        await restored.rawQuery('SELECT * FROM $table ORDER BY rowid'),
+        before[table],
+        reason: 'isi tabel $table berubah setelah restore',
+      );
+    }
+    final restoredReceipt = File(
+      (await db.all())
+          .singleWhere((tx) => tx.note == 'bukti backup akurat')
+          .receiptPath!,
+    );
+    expect(await restoredReceipt.readAsBytes(), expectedReceipt);
+    expect(await restoredReceipt.length(), 4096);
+    final restoredIcon = parseStoredImageIcon(
+      (await db.wallets()).first.iconKey,
+    )!;
+    expect(await File(restoredIcon.path).readAsBytes(), expectedIcon);
+    expect(restoredIcon.scale, 1.2);
+  });
+
+  test('kategori hanya tersembunyi selama tidak dipakai data lain', () async {
+    SharedPreferences.setMockInitialValues({});
+    final db = DatabaseHelper.instance;
+    final raw = await db.database;
+    for (final table in ['transactions', 'recurrings']) {
+      await raw.delete(table, where: 'category_id = ?', whereArgs: ['kopi']);
+    }
+
+    final provider = CategoryProvider();
+    await provider.load();
+    expect(
+      provider.expenseAll.any((category) => category.id == 'kopi'),
+      isTrue,
+    );
+
+    await db.saveBudget(
+      const Budget(
+        id: 'category_delete_guard',
+        name: 'Kopi',
+        iconKey: 'coffee',
+        color: Color(0xFF795548),
+        type: BudgetType.kebutuhan,
+        amount: 100000,
+        scope: BudgetScope.category,
+        categoryId: 'kopi',
+      ),
+    );
+    expect(await provider.deleteCategory('kopi'), isFalse);
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('hiddenCategories', ['kopi']);
+    await provider.load();
+    expect(provider.all.any((category) => category.id == 'kopi'), isTrue);
+    expect(prefs.getStringList('hiddenCategories'), isEmpty);
+
+    await db.deleteBudget('category_delete_guard');
+    expect(await provider.deleteCategory('kopi'), isTrue);
+    expect(provider.all.any((category) => category.id == 'kopi'), isFalse);
+  });
+
+  test('pemakaian ikon custom dapat dilacak ke nama data', () async {
+    final db = DatabaseHelper.instance;
+    const path = '/tmp/ikon-terlacak.png';
+    await db.upsertCustomCategory(
+      CustomCategory(
+        id: 'kategori_ikon_terlacak',
+        name: 'Ikon Terlacak',
+        iconKey: storedImageIcon(path, 1),
+        color: const Color(0xFF42A5F5),
         type: TxType.expense,
       ),
     );
 
-    expect(await db.restoreFrom(backup.path), isTrue);
-    expect((await db.all()).length, before);
+    expect(
+      (await db.customIconUsages())[path],
+      contains('Kategori: Ikon Terlacak'),
+    );
+    await db.deleteCustomCategory('kategori_ikon_terlacak');
   });
-
-  test(
-    'kategori bawaan yang tidak dipakai bisa dihapus dari pilihan',
-    () async {
-      SharedPreferences.setMockInitialValues({});
-      final db = DatabaseHelper.instance;
-      final raw = await db.database;
-      for (final table in ['transactions', 'recurrings']) {
-        await raw.delete(table, where: 'category_id = ?', whereArgs: ['kopi']);
-      }
-
-      final provider = CategoryProvider();
-      await provider.load();
-      expect(
-        provider.expenseAll.any((category) => category.id == 'kopi'),
-        isTrue,
-      );
-
-      expect(await provider.deleteCategory('kopi'), isTrue);
-      expect(
-        provider.expenseAll.any((category) => category.id == 'kopi'),
-        isFalse,
-      );
-    },
-  );
 }

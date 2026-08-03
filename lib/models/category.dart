@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../utils/stored_icon.dart';
+
 enum TxType { income, expense }
 
 class Category {
@@ -9,6 +11,7 @@ class Category {
   final Color color;
   final TxType type;
   final String? emoji;
+  final String? imageKey;
 
   const Category({
     required this.id,
@@ -17,11 +20,16 @@ class Category {
     required this.color,
     required this.type,
     this.emoji,
+    this.imageKey,
   });
 
-  Widget iconWidget({Color? color, double? size}) => emoji == null
-      ? Icon(icon, color: color, size: size)
-      : Text(emoji!, style: TextStyle(fontSize: size));
+  Widget iconWidget({Color? color, double? size}) => storedIconWidget(
+    imageKey ?? '',
+    size: size,
+    fallback: emoji == null
+        ? Icon(icon, color: color, size: size)
+        : Text(emoji!, style: TextStyle(fontSize: size)),
+  );
 }
 
 const List<Category> expenseCategories = [
@@ -476,27 +484,43 @@ const categoryIconChoices = <String, IconData>{
 };
 
 const categoryColorChoices = [
+  // LOCK: jangan ubah/hapus nilai ARGB lama. Urutan ini hanya untuk UI;
+  // database menyimpan nilai ARGB, bukan indeks warna.
   Color(0xFFD32F2F),
   Color(0xFFEF5350),
+  Color(0xFFC96F53), // Terracotta
   Color(0xFFFF7043),
+  Color(0xFFFF8F00), // Deep orange
   Color(0xFFFFA726),
+  Color(0xFFC59A45), // Antique gold
   Color(0xFFFDD835),
   Color(0xFFFFCA28),
   Color(0xFFFFEE58),
+  Color(0xFFFFF176),
   Color(0xFFFFF59D),
-  Color(0xFF2E7D32),
   Color(0xFF7CB342),
   Color(0xFF66BB6A),
+  Color(0xFF2E7D32),
+  Color(0xFF6F9D77), // Sage
+  Color(0xFF00897B), // Dark teal
   Color(0xFF26A69A),
   Color(0xFF26C6DA),
-  Color(0xFF1565C0),
+  Color(0xFF8DB7D8),
   Color(0xFF42A5F5),
+  Color(0xFF1565C0),
+  Color(0xFF2E5BFF),
   Color(0xFF5C6BC0),
   Color(0xFF7E57C2),
+  Color(0xFF8F79B7), // Lavender
   Color(0xFF6A1B9A),
   Color(0xFFAB47BC),
+  Color(0xFFAD1457), // Deep rose
   Color(0xFFEC407A),
   Color(0xFF8D6E63),
+  Color(0xFF546E7A),
+  Color(0xFF78909C),
+  Color(0xFF90A4AE),
+  Color(0xFFBDBDBD),
 ];
 
 /// Satu nama per baris atau dipisah koma; maksimal 20 kategori sekali simpan.
@@ -534,6 +558,7 @@ class CustomCategory {
     color: color,
     type: type,
     emoji: iconKey.startsWith('emoji:') ? iconKey.substring(6) : null,
+    imageKey: isStoredImageIcon(iconKey) ? iconKey : null,
   );
 
   Map<String, dynamic> toMap() => {

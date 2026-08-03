@@ -32,6 +32,8 @@ class CategoryProvider extends ChangeNotifier {
   List<Category> get incomeAll =>
       _highlightedFirst(_merged(incomeCategories, TxType.income));
 
+  List<Category> get all => [...expenseAll, ...incomeAll];
+
   List<Category> _highlightedFirst(List<Category> categories) => [
     ...categories.where((category) => isHighlighted(category.id)),
     ...categories.where((category) => !isHighlighted(category.id)),
@@ -63,7 +65,16 @@ class CategoryProvider extends ChangeNotifier {
                   'freelance',
                 ])
             .toSet();
-    _hidden = (prefs.getStringList('hiddenCategories') ?? const []).toSet();
+    final storedHidden = (prefs.getStringList('hiddenCategories') ?? const [])
+        .toSet();
+    _hidden = {};
+    for (final id in storedHidden) {
+      if (await _db.categoryUsageCount(id) == 0) _hidden.add(id);
+    }
+    if (_hidden.length != storedHidden.length) {
+      await prefs.setStringList('hiddenCategories', _hidden.toList());
+      unawaited(WidgetService.update(syncOptions: true));
+    }
     // Registry global biar categoryById() kenal kategori custom
     customCategoryRegistry
       ..clear()
@@ -74,12 +85,14 @@ class CategoryProvider extends ChangeNotifier {
 
   Future<void> saveCategory(CustomCategory category) async {
     await _db.upsertCustomCategory(category);
+    await _db.cleanupUnusedCustomIcons();
     await load();
     unawaited(WidgetService.update(syncOptions: true));
   }
 
   Future<void> saveCategories(Iterable<CustomCategory> categories) async {
     await _db.upsertCustomCategories(categories);
+    await _db.cleanupUnusedCustomIcons();
     await load();
     unawaited(WidgetService.update(syncOptions: true));
   }
@@ -92,9 +105,9 @@ class CategoryProvider extends ChangeNotifier {
     unawaited(WidgetService.update(syncOptions: true));
   }
 
-  /// Hapus kategori. Gagal (false) kalau masih dipakai transaksi.
+  /// Hapus kategori. Gagal (false) kalau masih dipakai data lain.
   Future<bool> deleteCategory(String id) async {
-    final count = await _db.transactionCountForCategory(id);
+    final count = await _db.categoryUsageCount(id);
     if (count > 0) return false;
     final category = categoryById(id);
     final sameType = category.type == TxType.expense ? expenseAll : incomeAll;
@@ -111,6 +124,7 @@ class CategoryProvider extends ChangeNotifier {
       await prefs.setStringList('highlightedCategories', _highlighted.toList());
     }
     await load();
+    await _db.cleanupUnusedCustomIcons();
     unawaited(WidgetService.update(syncOptions: true));
     return true;
   }

@@ -1,4 +1,4 @@
-package com.noctilune.duitnia
+package com.noctilune.duitges
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
@@ -596,7 +596,7 @@ open class SaldoWidgetProvider : HomeWidgetProvider() {
     )
 
     companion object {
-        private const val ACTION_PREFIX = "com.noctilune.duitnia.WIDGET_"
+        private const val ACTION_PREFIX = "com.noctilune.duitges.WIDGET_"
         private const val EXTRA_VALUE = "value"
         private const val PAGE_SIZE = 4
         private val INCOME_COLOR = Color.rgb(67, 217, 122)

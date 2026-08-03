@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../db/database_helper.dart';
+import '../models/custom_template.dart';
 import '../providers/budget_provider.dart';
 import '../providers/category_provider.dart';
 import '../providers/debt_provider.dart';
@@ -20,9 +21,14 @@ import '../services/excel_importer.dart';
 import '../services/reminder_service.dart';
 import '../utils/app_style.dart';
 import '../utils/formatters.dart';
+import '../utils/theme_icon_media.dart';
 import '../widgets/page_header.dart';
 import '../widgets/theme_artwork.dart';
+import '../widgets/theme_customization_editor.dart';
+import '../widgets/theme_icon_view.dart';
+import '../widgets/theme_profile_icon_picker.dart';
 import '../widgets/looping_asset_video.dart';
+import '../widgets/custom_template_manager.dart';
 import 'receipts_screen.dart';
 import 'recurrings_screen.dart';
 import 'salary_rule_screen.dart';
@@ -30,21 +36,101 @@ import 'salary_rule_screen.dart';
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
+  Future<String?> _themeName(BuildContext context, [String value = '']) {
+    final controller = TextEditingController(text: value);
+    return showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(value.isEmpty ? 'Tambah tema custom' : 'Ubah nama tema'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLength: 30,
+          decoration: const InputDecoration(labelText: 'Nama tema'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final name = controller.text.trim();
+              if (name.isNotEmpty) Navigator.pop(context, name);
+            },
+            child: const Text('Simpan'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _addTheme(
+    BuildContext context,
+    SettingsProvider settings,
+  ) async {
+    final name = await _themeName(context);
+    if (name != null) await settings.addCustomTheme(name);
+  }
+
+  Future<void> _renameTheme(
+    BuildContext context,
+    SettingsProvider settings,
+  ) async {
+    final profile = settings.activeCustomTheme;
+    if (profile == null) return;
+    final name = await _themeName(context, profile.name);
+    if (name != null) await settings.renameCustomTheme(profile.id, name);
+  }
+
+  Future<void> _deleteTheme(
+    BuildContext context,
+    SettingsProvider settings,
+  ) async {
+    final profile = settings.activeCustomTheme;
+    if (profile == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hapus tema custom?'),
+        content: Text(
+          '${profile.name} dan pengaturannya akan dihapus. '
+          'Transaksi serta template media tetap aman.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) await settings.deleteCustomTheme(profile.id);
+  }
+
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
     final pickerThemes = [
-      for (final theme in themePresets)
+      for (final theme in settings.availableThemes)
         if (theme.id != 'jjk2') ...[
           theme,
           if (theme.id == 'jjk')
-            themePresets.firstWhere((theme) => theme.id == 'jjk2'),
+            settings.availableThemes.firstWhere((theme) => theme.id == 'jjk2'),
         ],
     ];
     return SafeArea(
       child: Column(
         children: [
-          const PageHeader(title: 'Kustomisasi', artworkTile: 3),
+          const PageHeader(
+            title: 'Kustomisasi',
+            artworkTile: 3,
+            headerIndex: 3,
+          ),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
@@ -52,87 +138,161 @@ class SettingsScreen extends StatelessWidget {
                 _Section(
                   icon: Icons.auto_awesome,
                   title: 'Tema Aplikasi',
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        for (final theme in pickerThemes)
-                          SizedBox(
-                            width: 76,
-                            child: Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: _ThemeOption(
-                                theme: theme,
-                                selected: theme.id == settings.preset.id,
-                                onTap: () => settings.setTheme(theme),
+                  collapsible: true,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            for (final theme in pickerThemes)
+                              SizedBox(
+                                width: 76,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: _ThemeOption(
+                                    theme: theme,
+                                    customIconKey: settings
+                                        .customThemeById(theme.id)
+                                        ?.iconKey,
+                                    selected: theme.id == settings.preset.id,
+                                    onTap: () => settings.setTheme(theme),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      OutlinedButton.icon(
+                        onPressed: () => _addTheme(context, settings),
+                        icon: const Icon(Icons.add),
+                        label: const Text('Tambah tema custom'),
+                      ),
+                      if (settings.activeCustomTheme case final profile?) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () =>
+                                    _renameTheme(context, settings),
+                                icon: const Icon(Icons.edit_outlined),
+                                label: const Text('Ubah nama'),
                               ),
                             ),
-                          ),
+                            const SizedBox(width: 8),
+                            IconButton.outlined(
+                              tooltip: 'Hapus tema',
+                              onPressed: () => _deleteTheme(context, settings),
+                              icon: const Icon(Icons.delete_outline),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        ThemeProfileIconPicker(
+                          iconKey: profile.iconKey ?? 'default',
+                          previewSeconds: profile.previewSeconds,
+                          color: settings.accent,
+                          onChanged: (value) =>
+                              settings.setCustomThemeIcon(profile.id, value),
+                          onPreviewSecondsChanged: (seconds) =>
+                              settings.setCustomThemePreviewSeconds(
+                                profile.id,
+                                seconds,
+                              ),
+                        ),
                       ],
-                    ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 16),
-                if (settings.preset.id == 'frieren_rial') ...[
-                  _Section(
-                    icon: Icons.wallpaper_outlined,
-                    title: 'Template Background',
-                    child: GridView.count(
-                      crossAxisCount: 2,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      mainAxisSpacing: 10,
-                      crossAxisSpacing: 10,
-                      childAspectRatio: 1.6,
-                      children: [
-                        for (final background in FrierenRialBackground.values)
-                          _BackgroundTemplateOption(
-                            background: background,
-                            selected:
-                                background == settings.frierenRialBackground,
-                            accent: settings.accent,
-                            onTap: () =>
-                                settings.setFrierenRialBackground(background),
-                          ),
-                      ],
-                    ),
+                const _Section(
+                  icon: Icons.tune,
+                  title: 'Editor Tema Aktif',
+                  collapsible: true,
+                  child: ThemeCustomizationEditor(),
+                ),
+                const SizedBox(height: 16),
+                _Section(
+                  icon: Icons.wallpaper_outlined,
+                  title: 'Template Background',
+                  collapsible: true,
+                  child: Column(
+                    children: [
+                      GridView.count(
+                        crossAxisCount: 2,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        mainAxisSpacing: 10,
+                        crossAxisSpacing: 10,
+                        childAspectRatio: 1.6,
+                        children: [
+                          for (final background in settings.themeBackgrounds)
+                            _BackgroundTemplateOption(
+                              background: background,
+                              selected:
+                                  settings.customBackground == null &&
+                                  background == settings.themeBackground,
+                              accent: settings.accent,
+                              onTap: () =>
+                                  settings.setFrierenRialBackground(background),
+                            ),
+                        ],
+                      ),
+                      const Divider(height: 28),
+                      const CustomTemplateManager(
+                        kind: CustomTemplateKind.background,
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                ],
-                if (settings.preset.tones.isNotEmpty) ...[
-                  _Section(
-                    icon: Icons.color_lens_outlined,
-                    title: 'Warna Maskot',
-                    child: Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      children: [
-                        for (final tone in settings.preset.tones)
-                          ChoiceChip(
-                            selected: tone.id == settings.tone?.id,
-                            showCheckmark: false,
-                            avatar: CircleAvatar(backgroundColor: tone.accent),
-                            label: Text(tone.label),
-                            onSelected: (_) => settings.setTone(tone),
-                          ),
-                      ],
-                    ),
+                ),
+                const SizedBox(height: 16),
+                _Section(
+                  icon: Icons.color_lens_outlined,
+                  title: 'Varian Warna Tema',
+                  collapsible: true,
+                  child: Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: settings.preset.tones.isEmpty
+                        ? [
+                            const ChoiceChip(
+                              selected: true,
+                              showCheckmark: false,
+                              label: Text('Default'),
+                            ),
+                          ]
+                        : [
+                            for (final tone in settings.preset.tones)
+                              ChoiceChip(
+                                selected: tone.id == settings.tone?.id,
+                                showCheckmark: false,
+                                avatar: CircleAvatar(
+                                  backgroundColor: tone.accent,
+                                ),
+                                label: Text(tone.label),
+                                onSelected: (_) => settings.setTone(tone),
+                              ),
+                          ],
                   ),
-                  const SizedBox(height: 16),
-                ],
+                ),
+                const SizedBox(height: 16),
                 // Tema yang warnanya udah otomatis ganti per tab
                 // (tabAccents) ga butuh picker manual — bakal bingungin
                 // soalnya milih warna di sini ga akan kelihatan ngefek.
                 if (settings.preset.tabAccents == null) ...[
                   _Section(
                     icon: Icons.palette_outlined,
-                    title: 'Warna Tema',
+                    title: 'Warna Aksen',
+                    collapsible: true,
                     child: GridView.count(
-                      crossAxisCount: 4,
+                      crossAxisCount: 7,
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      mainAxisSpacing: 14,
-                      crossAxisSpacing: 14,
+                      mainAxisSpacing: 8,
+                      crossAxisSpacing: 8,
                       childAspectRatio: 1,
                       children: [
                         for (final color in SettingsProvider.presetColors)
@@ -149,6 +309,7 @@ class SettingsScreen extends StatelessWidget {
                 _Section(
                   icon: Icons.text_fields,
                   title: 'Font Aplikasi',
+                  collapsible: true,
                   child: Column(
                     children: [
                       Row(
@@ -205,6 +366,7 @@ class SettingsScreen extends StatelessWidget {
                 _Section(
                   icon: Icons.credit_card,
                   title: 'Template Kartu Saldo',
+                  collapsible: true,
                   child: Column(
                     children: [
                       for (final style in CardStyle.values)
@@ -222,9 +384,15 @@ class SettingsScreen extends StatelessWidget {
                           _CardStyleOption(
                             style: style,
                             accent: settings.accent,
-                            selected: style == settings.cardStyle,
+                            selected:
+                                settings.customCard == null &&
+                                style == settings.cardStyle,
                             onTap: () => settings.setCardStyle(style),
                           ),
+                      const Divider(height: 28),
+                      const CustomTemplateManager(
+                        kind: CustomTemplateKind.card,
+                      ),
                     ],
                   ),
                 ),
@@ -305,6 +473,15 @@ class SettingsScreen extends StatelessWidget {
                         value: settings.privacyMode,
                         onChanged: settings.setPrivacyMode,
                       ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Sembunyikan Saldo Widget'),
+                        subtitle: const Text(
+                          'Saldo di widget selalu ditampilkan sebagai titik',
+                        ),
+                        value: settings.hideWidgetBalance,
+                        onChanged: settings.setHideWidgetBalance,
+                      ),
                     ],
                   ),
                 ),
@@ -348,15 +525,31 @@ class SettingsScreen extends StatelessWidget {
                         ),
                       ),
                       const _ReminderSetting(),
-                      SwitchListTile(
+                      ListTile(
                         contentPadding: EdgeInsets.zero,
-                        secondary: const Icon(Icons.backup_outlined),
+                        leading: const Icon(Icons.backup_outlined),
                         title: const Text('Backup Otomatis Mingguan'),
                         subtitle: const Text(
                           'Salinan data disimpen di HP tiap 7 hari',
                         ),
-                        value: settings.autoBackupEnabled,
-                        onChanged: settings.setAutoBackup,
+                        trailing: Switch(
+                          value: settings.autoBackupEnabled,
+                          onChanged: settings.setAutoBackup,
+                        ),
+                      ),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.receipt_long_outlined),
+                        title: const Text('Sertakan Foto Struk'),
+                        subtitle: const Text(
+                          'Matikan agar backup otomatis lebih kecil',
+                        ),
+                        trailing: Switch(
+                          value: settings.autoBackupIncludePhotos,
+                          onChanged: settings.autoBackupEnabled
+                              ? settings.setAutoBackupIncludePhotos
+                              : null,
+                        ),
                       ),
                       FutureBuilder<List<String?>>(
                         future: Future.wait([
@@ -436,6 +629,23 @@ class SettingsScreen extends StatelessWidget {
                             context,
                             MaterialPageRoute(
                               builder: (_) => const ReceiptsScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.image_outlined),
+                        title: const Text('Kelola Ikon'),
+                        subtitle: const Text(
+                          'Lacak pemakaian ikon custom + ukurannya',
+                        ),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ReceiptsScreen.icons(),
                             ),
                           );
                         },
@@ -577,6 +787,8 @@ class _ImportButtonState extends State<_ImportButton> {
     try {
       final result = await ExcelImporter.import(path);
       if (!mounted) return;
+      await context.read<CategoryProvider>().load();
+      if (!mounted) return;
       await context.read<TransactionProvider>().load();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -638,7 +850,7 @@ class _BackupRestoreButtonsState extends State<_BackupRestoreButtons> {
       final dir = await getTemporaryDirectory();
       final now = DateTime.now();
       final name =
-          'duit_nia_backup_${now.year}-'
+          'duit_ges_backup_${now.year}-'
           '${now.month.toString().padLeft(2, '0')}-'
           '${now.day.toString().padLeft(2, '0')}.duitges';
       final path = '${dir.path}/$name';
@@ -924,11 +1136,13 @@ class _BackgroundTemplateOption extends StatelessWidget {
 /// Satu pilihan tema penuh: emoji + nama + warna khasnya.
 class _ThemeOption extends StatelessWidget {
   final ThemePreset theme;
+  final String? customIconKey;
   final bool selected;
   final VoidCallback onTap;
 
   const _ThemeOption({
     required this.theme,
+    this.customIconKey,
     required this.selected,
     required this.onTap,
   });
@@ -965,7 +1179,29 @@ class _ThemeOption extends StatelessWidget {
               curve: Curves.easeOutBack,
               // Tema polos tanpa maskot dipreview pakai bulatan gradient
               // warnanya; tema bergambar pakai artwork-nya.
-              child: previewAsset != null
+              child: customIconKey != null
+                  ? SizedBox.square(
+                      dimension: 44,
+                      child: Center(
+                        child: ThemeIconView(
+                          iconKey: customIconKey,
+                          size: 34,
+                          previewSeconds:
+                              context
+                                  .read<SettingsProvider>()
+                                  .customThemeById(theme.id)
+                                  ?.previewSeconds ??
+                              3,
+                          animate: selected,
+                          fallback: Icon(
+                            isThemeVideo(customIconKey)
+                                ? Icons.play_circle_outline
+                                : Icons.tune,
+                          ),
+                        ),
+                      ),
+                    )
+                  : previewAsset != null
                   ? Image.asset(
                       previewAsset,
                       width: 44,
@@ -1031,15 +1267,44 @@ class _Section extends StatelessWidget {
   final IconData icon;
   final String title;
   final Widget child;
+  final bool collapsible;
 
   const _Section({
     required this.icon,
     required this.title,
     required this.child,
+    this.collapsible = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    if (collapsible) {
+      return Container(
+        decoration: BoxDecoration(
+          color: cardColor(context),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: cardShadow(context),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Theme(
+          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+          child: ExpansionTile(
+            tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+            childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            leading: Icon(
+              icon,
+              size: 18,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            title: Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+            ),
+            children: [child],
+          ),
+        ),
+      );
+    }
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
