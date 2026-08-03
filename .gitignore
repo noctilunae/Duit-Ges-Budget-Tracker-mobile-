@@ -33,3 +33,11 @@ tmp/
 # Dokumentasi Markdown lokal
 *.md
 !/README.md
+
+# Tema eksklusif Full disimpan lokal, bukan di repository publik
+assets/theme/anya/
+assets/theme/frieren/
+assets/theme/frieren_rial/
+assets/theme/jjk/
+assets/theme/jjk2/
+assets/theme/spongebob/

@@ -20,10 +20,17 @@ enum CardStyle {
   neon('Neon'),
   glass('Glass'),
   minimal('Minimal'),
+  jjkVideo1('JJK Video 1'),
+  jjkVideo2('JJK Video 2'),
+  frierenRialVideo135('Frieren Rial 135'),
+  frierenRialVideo136('Frieren Rial 136'),
+  frierenRialVideo137('Frieren Rial 137'),
+  frierenRialVideo138('Frieren Rial 138'),
   callDuck('Call Duck');
 
   final String label;
   const CardStyle(this.label);
+  bool get isFrierenRial => name.startsWith('frierenRialVideo');
 }
 
 /// Pilihan font tampilan app — semua dibundel lokal (offline).
@@ -301,9 +308,135 @@ final _allThemePresets = [
         'Belum ada transaksi bulan ini, quak!\n'
         'Tekan tombol + buat nambahin.',
   ),
+  ThemePreset(
+    id: 'anya',
+    name: 'Anya',
+    icon: Icons.face_3,
+    emptyIcon: Icons.face_3,
+    artwork: 'assets/theme/anya',
+    defaultAccent: const Color(0xFFE88D9B),
+    lightBackground: const [Color(0xFFFFF5F7), Color(0xFFFBE3E8)],
+    darkBackground: const [Color(0xFF241417), Color(0xFF321C21)],
+    emptyText:
+        'Belum ada transaksi bulan ini. Waku waku!\n'
+        'Tekan tombol + buat nambahin.',
+  ),
+  ThemePreset(
+    id: 'jjk',
+    name: 'JJK 1',
+    icon: Icons.auto_awesome,
+    emptyIcon: Icons.auto_awesome,
+    artwork: 'assets/theme/jjk',
+    defaultAccent: const Color(0xFF5865A6),
+    lightBackground: const [Color(0xFFF5F4FA), Color(0xFFE5E7F2)],
+    darkBackground: const [Color(0xFF10121A), Color(0xFF1A1E2B)],
+  ),
+  ThemePreset(
+    id: 'frieren',
+    name: 'Frieren',
+    icon: Icons.hourglass_empty,
+    emptyIcon: Icons.hourglass_empty,
+    artwork: 'assets/theme/frieren',
+    fabGif: 'assets/theme/frieren/add_transaction.gif',
+    fabGifOffset: const Offset(2, -6),
+    defaultAccent: const Color(0xFF7889C4),
+    lightBackground: const [Color(0xFFF7F8FF), Color(0xFFE7ECF8)],
+    darkBackground: const [Color(0xFF111522), Color(0xFF1B2333)],
+    tabAccents: const [
+      Color(0xFF8E97B8),
+      Color(0xFF6FA3D6),
+      Color(0xFF9587C2),
+      Color(0xFFC97A52),
+    ],
+    tabLightBackgrounds: const [
+      [Color(0xFFF7F8FF), Color(0xFFE7ECF8)],
+      [Color(0xFFF1F7FD), Color(0xFFDCEBF9)],
+      [Color(0xFFF6F3FB), Color(0xFFE7DFF5)],
+      [Color(0xFFFDF3EC), Color(0xFFF6E0CF)],
+    ],
+    tabDarkBackgrounds: const [
+      [Color(0xFF111522), Color(0xFF1B2333)],
+      [Color(0xFF0E1A26), Color(0xFF15283A)],
+      [Color(0xFF171325), Color(0xFF221C33)],
+      [Color(0xFF241710), Color(0xFF331F14)],
+    ],
+  ),
+  ThemePreset(
+    id: 'frieren_rial',
+    name: 'Frieren Rial',
+    icon: Icons.nightlight_round,
+    showMascotIcon: false,
+    fabGif: 'assets/theme/frieren_rial/add_transaction.gif',
+    tileGifs: const {
+      3: 'assets/theme/frieren_rial/footer_setelan.png',
+      6: 'assets/theme/frieren_rial/footer_transaksi.png',
+      7: 'assets/theme/frieren_rial/footer_budget.png',
+      8: 'assets/theme/frieren_rial/footer_statistik.png',
+    },
+    defaultAccent: const Color(0xFF9AB7FF),
+    lightBackground: const [Color(0xFFF2F5FC), Color(0xFFDFE8F7)],
+    darkBackground: const [Color(0xFF121827), Color(0xFF1A2436)],
+  ),
+  ThemePreset(
+    id: 'spongebob',
+    name: 'SpongeBob',
+    icon: Icons.crop_square,
+    emptyIcon: Icons.crop_square,
+    artwork: 'assets/theme/spongebob',
+    fabGif: 'assets/theme/spongebob/add_transaction.gif',
+    tileGifs: const {
+      0: 'assets/theme/spongebob/mascot_utama.gif',
+      1: 'assets/theme/spongebob/header_home.gif',
+    },
+    defaultAccent: const Color(0xFFFFC914),
+    lightBackground: const [Color(0xFFFFFBEA), Color(0xFFFFF3C4)],
+    darkBackground: const [Color(0xFF221C08), Color(0xFF2E260D)],
+  ),
+  ThemePreset(
+    id: 'jjk2',
+    name: 'JJK 2',
+    icon: Icons.circle,
+    emptyIcon: Icons.circle,
+    artwork: 'assets/theme/jjk2',
+    fabGif: 'assets/theme/jjk2/add_transaction.gif',
+    footerTransaksiGif: 'assets/theme/jjk2/footer_transaksi.gif',
+    tileGifs: const {
+      0: 'assets/theme/jjk2/mascot_utama.gif',
+      5: 'assets/theme/jjk2/footer_budget.gif',
+      9: 'assets/theme/jjk2/footer_statistik.gif',
+      15: 'assets/theme/jjk2/footer_setelan.gif',
+    },
+    footerGifManualControl: true,
+    defaultAccent: const Color(0xFF42A5FF),
+    lightBackground: const [Color(0xFFEAF5FF), Color(0xFFCFE8FF)],
+    darkBackground: const [Color(0xFF091828), Color(0xFF102A44)],
+  ),
+  ThemePreset(
+    id: 'matcha',
+    name: 'Matcha',
+    icon: Icons.emoji_food_beverage,
+    emptyIcon: Icons.emoji_food_beverage,
+    defaultAccent: const Color(0xFF6B9E78),
+    lightBackground: const [Color(0xFFF4F9F0), Color(0xFFE5F2DC)],
+    darkBackground: const [Color(0xFF121A12), Color(0xFF1B261B)],
+  ),
 ];
 
-final themePresets = _allThemePresets;
+const _liteThemeIds = {
+  'klasik',
+  'klasik_2',
+  'klasik_3',
+  'klasik_4',
+  'klasik_5',
+  'kucing',
+  'bebek',
+  'call_duck',
+};
+final themePresets = appFlavor == 'lite'
+    ? _allThemePresets
+          .where((theme) => _liteThemeIds.contains(theme.id))
+          .toList()
+    : _allThemePresets;
 
 class SettingsProvider extends ChangeNotifier {
   static const _privacyChannel = MethodChannel('duit_ges/privacy');
@@ -435,6 +568,28 @@ class SettingsProvider extends ChangeNotifier {
   String? headerArtwork(int index) => headerArtworkFor(preset.id, index);
 
   int footerTile(int index, [ThemePreset? target]) {
+    final theme = target ?? preset;
+    if (const {'frieren', 'jjk', 'spongebob', 'jjk2'}.contains(theme.id)) {
+      return switch (index) {
+        0 =>
+          theme.id == 'frieren'
+              ? 2
+              : theme.id == 'jjk'
+              ? 10
+              : 6,
+        1 => 5,
+        2 => 9,
+        3 =>
+          theme.id == 'frieren'
+              ? 12
+              : theme.id == 'jjk'
+              ? 13
+              : theme.id == 'spongebob'
+              ? 14
+              : 15,
+        _ => -1,
+      };
+    }
     return switch (index) {
       0 => 6,
       1 => 7,
@@ -457,6 +612,7 @@ class SettingsProvider extends ChangeNotifier {
     if (slot == 'footer_0') return staticFooterTransactionAsset();
     if (slot != 'add_transaction') return null;
     return switch (preset.id) {
+      'jjk2' => 'assets/theme/jjk2/add_transaction_idle.gif',
       'call_duck' => 'assets/theme/call_duck/add_transaction_static.png',
       _ => preset.fabGif,
     };
@@ -636,6 +792,13 @@ class SettingsProvider extends ChangeNotifier {
     // yang gak nyambung (misal abis ganti tema manual di luar setTheme),
     // balikin ke default biar gak nampilin card khusus tema lain.
     if (_cardStyle == CardStyle.callDuck && _themeId != 'call_duck') {
+      _cardStyle = CardStyle.gradient;
+    }
+    if (const {CardStyle.jjkVideo1, CardStyle.jjkVideo2}.contains(_cardStyle) &&
+        _themeId != 'jjk2') {
+      _cardStyle = CardStyle.gradient;
+    }
+    if (_cardStyle.isFrierenRial && _themeId != 'frieren_rial') {
       _cardStyle = CardStyle.gradient;
     }
     final savedFont = prefs.getString('font');
@@ -848,7 +1011,14 @@ class SettingsProvider extends ChangeNotifier {
     // biar gak nyangkut dipakai tema lain yang gak nyambung asetnya.
     if (theme.id == 'call_duck') {
       _cardStyle = CardStyle.callDuck;
+    } else if (theme.id == 'frieren_rial') {
+      _cardStyle = CardStyle.frierenRialVideo135;
     } else if (_cardStyle == CardStyle.callDuck) {
+      _cardStyle = CardStyle.gradient;
+    } else if (_cardStyle.isFrierenRial) {
+      _cardStyle = CardStyle.gradient;
+    } else if (theme.id != 'jjk2' &&
+        const {CardStyle.jjkVideo1, CardStyle.jjkVideo2}.contains(_cardStyle)) {
       _cardStyle = CardStyle.gradient;
     }
     notifyListeners();

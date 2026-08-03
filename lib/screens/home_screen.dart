@@ -10,6 +10,7 @@ import '../utils/app_style.dart';
 import '../utils/formatters.dart';
 import '../widgets/animated_widgets.dart';
 import '../widgets/custom_template_view.dart';
+import '../widgets/looping_asset_video.dart';
 import '../widgets/month_selector.dart';
 import '../widgets/page_header.dart';
 import '../widgets/transaction_detail_sheet.dart';
@@ -222,6 +223,24 @@ class _BalanceCard extends StatelessWidget {
           chipBg: settings.accent.withValues(alpha: 0.1),
           chipIcon: settings.accent,
         );
+      case CardStyle.jjkVideo1:
+      case CardStyle.jjkVideo2:
+      case CardStyle.frierenRialVideo135:
+      case CardStyle.frierenRialVideo136:
+      case CardStyle.frierenRialVideo137:
+      case CardStyle.frierenRialVideo138:
+        return _CardPalette(
+          decoration: BoxDecoration(
+            color: Colors.black,
+            borderRadius: radius,
+            boxShadow: cardShadow(context),
+          ),
+          amount: Colors.white,
+          label: Colors.white70,
+          chipBg: Colors.black38,
+          chipIcon: Colors.white,
+          amountGlow: const [Shadow(color: Colors.black, blurRadius: 10)],
+        );
       case CardStyle.callDuck:
         return _CardPalette(
           decoration: BoxDecoration(
@@ -245,6 +264,19 @@ class _BalanceCard extends StatelessWidget {
     final settings = context.watch<SettingsProvider>();
     final palette = _palette(context, settings);
     final isMinimal = settings.cardStyle == CardStyle.minimal;
+    final videoAsset = switch (settings.cardStyle) {
+      CardStyle.jjkVideo1 => 'assets/theme/jjk2/card_saldo_1.mp4',
+      CardStyle.jjkVideo2 => 'assets/theme/jjk2/card_saldo_2.mp4',
+      CardStyle.frierenRialVideo135 =>
+        'assets/theme/frieren_rial/card_saldo_135.mp4',
+      CardStyle.frierenRialVideo136 =>
+        'assets/theme/frieren_rial/card_saldo_136.mp4',
+      CardStyle.frierenRialVideo137 =>
+        'assets/theme/frieren_rial/card_saldo_137.mp4',
+      CardStyle.frierenRialVideo138 =>
+        'assets/theme/frieren_rial/card_saldo_138.mp4',
+      _ => null,
+    };
     return Container(
       width: double.infinity,
       decoration: palette.decoration,
@@ -261,6 +293,24 @@ class _BalanceCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [Color(0x66000000), Color(0x22000000)],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+            if (videoAsset != null) ...[
+              Positioned.fill(
+                child: LoopingAssetVideo(
+                  key: ValueKey(videoAsset),
+                  asset: videoAsset,
+                  quarterTurns: settings.preset.id == 'frieren_rial' ? 0 : 3,
+                ),
+              ),
+              const Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0x66000000), Color(0x14000000)],
                     ),
                   ),
                 ),

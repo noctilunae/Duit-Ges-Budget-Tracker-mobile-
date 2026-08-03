@@ -114,6 +114,18 @@ flutter:
     - assets/theme/classic_4/
     - assets/theme/classic_5/
     - assets/theme/call_duck/
+    - path: assets/theme/anya/
+      flavors: [full]
+    - path: assets/theme/jjk/
+      flavors: [full]
+    - path: assets/theme/frieren/
+      flavors: [full]
+    - path: assets/theme/frieren_rial/
+      flavors: [full]
+    - path: assets/theme/spongebob/
+      flavors: [full]
+    - path: assets/theme/jjk2/
+      flavors: [full]
 
   # Pilihan font app (bisa diganti user di Setelan) — semua variable
   # font, dibundel lokal biar full offline, ga nunggu download dari

@@ -330,8 +330,15 @@ class SettingsScreen extends StatelessWidget {
                       for (final style in CardStyle.values)
                         // Card "Call Duck" eksklusif tema Call Duck —
                         // di tema lain opsinya disembunyiin sepenuhnya.
-                        if (style != CardStyle.callDuck ||
-                            settings.preset.id == 'call_duck')
+                        if ((style != CardStyle.callDuck ||
+                                settings.preset.id == 'call_duck') &&
+                            (!const {
+                                  CardStyle.jjkVideo1,
+                                  CardStyle.jjkVideo2,
+                                }.contains(style) ||
+                                settings.preset.id == 'jjk2') &&
+                            (!style.isFrierenRial ||
+                                settings.preset.id == 'frieren_rial'))
                           _CardStyleOption(
                             style: style,
                             accent: settings.accent,
@@ -1431,6 +1438,13 @@ class _CardStyleOption extends StatelessWidget {
             ).colorScheme.onSurface.withValues(alpha: 0.1),
           ),
         );
+      case CardStyle.jjkVideo1:
+      case CardStyle.jjkVideo2:
+      case CardStyle.frierenRialVideo135:
+      case CardStyle.frierenRialVideo136:
+      case CardStyle.frierenRialVideo137:
+      case CardStyle.frierenRialVideo138:
+        return BoxDecoration(color: Colors.black, borderRadius: radius);
       case CardStyle.callDuck:
         return BoxDecoration(
           image: const DecorationImage(

@@ -77,6 +77,7 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
     final customBackground = settings.customBackground;
     final footerColor = pageBackground.last;
     final idleFabAsset = switch (settings.preset.id) {
+      'jjk2' => 'assets/theme/jjk2/add_transaction_idle.gif',
       'call_duck' => 'assets/theme/call_duck/add_transaction_static.png',
       _ => null,
     };

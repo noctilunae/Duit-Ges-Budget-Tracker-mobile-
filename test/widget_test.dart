@@ -761,6 +761,13 @@ void main() {
       'kucing',
       'bebek',
       'call_duck',
+      'anya',
+      'jjk',
+      'frieren',
+      'frieren_rial',
+      'spongebob',
+      'jjk2',
+      'matcha',
     });
     expect(callDuck.footerGifManualControl, isTrue);
     expect(callDuck.fabGif, 'assets/theme/call_duck/add_transaction.gif');

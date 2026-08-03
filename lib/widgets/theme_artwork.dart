@@ -7,6 +7,11 @@ import 'theme_icon_view.dart';
 /// Menampilkan PNG transparan sesuai fungsi ikon pada tema aktif.
 class ThemeArtwork extends StatelessWidget {
   static const _footerFallbacks = {
+    'jjk2': {
+      5: 'assets/theme/jjk2/footer_budget_static.png',
+      9: 'assets/theme/jjk2/footer_statistik_static.png',
+      15: 'assets/theme/jjk2/footer_setelan_static.png',
+    },
     'call_duck': {
       3: 'assets/theme/call_duck/footer_setelan_static.png',
       7: 'assets/theme/call_duck/footer_budget_static.png',
@@ -32,6 +37,27 @@ class ThemeArtwork extends StatelessWidget {
     'footer_setelan_3',
     'footer_setelan_4',
   ];
+
+  static const _legacyNames = [
+    'mascot_utama',
+    'header_home',
+    'footer_transaksi_frieren',
+    'header_setelan',
+    'konten_budget',
+    'footer_budget',
+    'footer_transaksi_default',
+    'header_budget',
+    'header_statistik',
+    'footer_statistik',
+    'footer_transaksi_jjk',
+    'konten_target',
+    'footer_setelan_frieren',
+    'footer_setelan_jjk',
+    'footer_setelan',
+    'footer_setelan_jjk2',
+  ];
+
+  static const _legacyThemes = {'anya', 'jjk', 'frieren', 'spongebob', 'jjk2'};
 
   final int tile;
   final double size;
@@ -156,8 +182,9 @@ class ThemeArtwork extends StatelessWidget {
       );
     }
 
+    final names = _legacyThemes.contains(theme.id) ? _legacyNames : _names;
     return Image.asset(
-      '$artwork/${_names[tile]}.png',
+      '$artwork/${names[tile]}.png',
       width: size,
       height: size,
       fit: BoxFit.contain,
