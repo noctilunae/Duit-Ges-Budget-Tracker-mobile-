@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+6002
+version: 1.0.0+8003
 
 environment:
   sdk: ^3.12.2
@@ -109,25 +109,11 @@ flutter:
     - assets/theme/duck/
     - assets/theme/duck_blue/
     - assets/theme/duck_pink/
-    - path: assets/theme/anya/
-      flavors:
-        - full
+    - assets/theme/classic_2/
+    - assets/theme/classic_3/
+    - assets/theme/classic_4/
+    - assets/theme/classic_5/
     - assets/theme/call_duck/
-    - path: assets/theme/jjk/
-      flavors:
-        - full
-    - path: assets/theme/frieren/
-      flavors:
-        - full
-    - path: assets/theme/frieren_rial/
-      flavors:
-        - full
-    - path: assets/theme/spongebob/
-      flavors:
-        - full
-    - path: assets/theme/jjk2/
-      flavors:
-        - full
 
   # Pilihan font app (bisa diganti user di Setelan) — semua variable
   # font, dibundel lokal biar full offline, ga nunggu download dari

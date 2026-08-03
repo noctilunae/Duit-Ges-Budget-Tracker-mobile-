@@ -25,8 +25,6 @@ class PageHeader extends StatelessWidget {
     final settings = context.watch<SettingsProvider>();
     final artworkSize = settings.headerArtwork(headerIndex) != null
         ? 44.0
-        : const {'jjk', 'frieren'}.contains(settings.preset.id)
-        ? 60.0
         : 36.0;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),

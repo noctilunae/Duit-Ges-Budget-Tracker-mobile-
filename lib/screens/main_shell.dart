@@ -25,7 +25,7 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
   int _index = 0;
 
-  // Toggle global JJK 2: footer dan FAB ganti bareng antara diam dan muter.
+  // Toggle global: footer dan FAB ganti bareng antara diam dan muter.
   bool _footerGifsPlaying = false;
 
   @override
@@ -74,76 +74,42 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
     final pageBackground = isLight
         ? settings.lightBackground
         : settings.darkBackground;
-    final isFrierenRial = settings.preset.id == 'frieren_rial';
-    final backgroundAsset = isFrierenRial
-        ? settings.frierenRialBackground.asset
-        : null;
     final customBackground = settings.customBackground;
     final footerColor = pageBackground.last;
     final idleFabAsset = switch (settings.preset.id) {
-      'jjk2' => 'assets/theme/jjk2/add_transaction_idle.gif',
       'call_duck' => 'assets/theme/call_duck/add_transaction_static.png',
       _ => null,
     };
-    final fabAsset = settings.addTransactionArtwork != null
+    final customAddTransaction = settings.hasThemeIconOverride(
+      'add_transaction',
+    );
+    final fabAsset =
+        customAddTransaction || settings.addTransactionArtwork != null
         ? null
         : idleFabAsset != null && !_footerGifsPlaying
         ? idleFabAsset
         : settings.preset.fabGif;
-    final fabImageSize = switch (settings.preset.id) {
-      'frieren' => 50.0,
-      'spongebob' => 60.0,
-      _ => 54.0,
-    };
+    const fabImageSize = 54.0;
     return Scaffold(
       backgroundColor: footerColor,
       body: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeOutCubic,
         decoration: BoxDecoration(
-          color: customBackground != null || backgroundAsset != null
-              ? Colors.black
-              : null,
-          gradient: customBackground == null && backgroundAsset == null
+          color: customBackground != null ? Colors.black : null,
+          gradient: customBackground == null
               ? LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: pageBackground,
                 )
               : null,
-          image: customBackground != null || backgroundAsset == null
-              ? null
-              : DecorationImage(
-                  image: AssetImage(backgroundAsset),
-                  fit: BoxFit.cover,
-                  alignment: Alignment.topCenter,
-                ),
         ),
         child: Stack(
           children: [
             if (customBackground != null)
               Positioned.fill(
                 child: CustomTemplateView(template: customBackground),
-              ),
-            if (backgroundAsset != null)
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        stops: const [0.55, 1],
-                        colors: [
-                          Colors.transparent,
-                          settings.frierenRialBackground.cardTone.withValues(
-                            alpha: 0.42,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
               ),
             FadeIndexedStack(
               index: _index,
@@ -201,9 +167,8 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
               else
                 const ThemeArtwork(tile: 0, size: 48, addTransaction: true),
               Positioned(
-                right: isFrierenRial ? 5 : 1,
-                top: isFrierenRial ? 5 : null,
-                bottom: isFrierenRial ? null : 1,
+                right: 1,
+                bottom: 1,
                 child: Transform.translate(
                   offset: settings.fabPlusOffset,
                   child: Container(
@@ -245,11 +210,7 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
                   _NavItem(
                     navIndex: 0,
                     icon: Icons.receipt_long,
-                    artworkTile: settings.preset.id == 'frieren'
-                        ? 2
-                        : settings.preset.id == 'jjk'
-                        ? 10
-                        : 6,
+                    artworkTile: settings.footerTile(0),
                     gifAsset: settings.preset.footerTransaksiGif,
                     label: 'Transaksi',
                     selected: _index == 0,
@@ -259,15 +220,7 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
                   _NavItem(
                     navIndex: 1,
                     icon: Icons.savings_outlined,
-                    artworkTile:
-                        const {
-                          'frieren',
-                          'jjk',
-                          'spongebob',
-                          'jjk2',
-                        }.contains(settings.preset.id)
-                        ? 5
-                        : 7,
+                    artworkTile: settings.footerTile(1),
                     label: 'Budget',
                     selected: _index == 1,
                     footerGifsPlaying: _footerGifsPlaying,
@@ -277,15 +230,7 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
                   _NavItem(
                     navIndex: 2,
                     icon: Icons.pie_chart,
-                    artworkTile:
-                        const {
-                          'frieren',
-                          'jjk',
-                          'spongebob',
-                          'jjk2',
-                        }.contains(settings.preset.id)
-                        ? 9
-                        : 8,
+                    artworkTile: settings.footerTile(2),
                     label: 'Statistik',
                     selected: _index == 2,
                     footerGifsPlaying: _footerGifsPlaying,
@@ -294,15 +239,7 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
                   _NavItem(
                     navIndex: 3,
                     icon: Icons.tune,
-                    artworkTile: settings.preset.id == 'frieren'
-                        ? 12
-                        : settings.preset.id == 'jjk'
-                        ? 13
-                        : settings.preset.id == 'spongebob'
-                        ? 14
-                        : settings.preset.id == 'jjk2'
-                        ? 15
-                        : 3,
+                    artworkTile: settings.footerTile(3),
                     label: 'Setelan',
                     selected: _index == 3,
                     footerGifsPlaying: _footerGifsPlaying,
@@ -382,12 +319,13 @@ class _NavItem extends StatelessWidget {
     final color = selected ? theme.primary : theme.onSurfaceVariant;
     final settings = context.watch<SettingsProvider>();
     final customFooterKey = settings.footerArtwork(navIndex);
+    final customFooterMode = settings.hasThemeIconOverride('footer_$navIndex');
     // Icon GIF dikasih ukuran lebih gede dari PNG statis (26px) — detail
     // animasinya baru kebaca jelas kalau agak besar dikit, 26px kekecilan.
-    final resolvedGif = customFooterKey == null
+    final resolvedGif = !customFooterMode && customFooterKey == null
         ? gifAsset ?? settings.preset.tileGifs[artworkTile]
         : null;
-    final isAnimated = customFooterKey != null || resolvedGif != null;
+    final isAnimated = customFooterMode || resolvedGif != null;
     final iconSize = isAnimated ? 36.0 : 26.0;
     // Tema footerGifManualControl: PNG statis sampai tombol play di bawah
     // FAB dipencet, lalu semua footer beralih ke GIF.
@@ -426,7 +364,7 @@ class _NavItem extends StatelessWidget {
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: customFooterKey != null
+                  child: customFooterMode
                       ? RepaintBoundary(
                           child: ThemeIconView(
                             iconKey: customFooterKey,
@@ -441,7 +379,7 @@ class _NavItem extends StatelessWidget {
                       ? RepaintBoundary(
                           child: ClipRect(
                             child: Transform.scale(
-                              // Crop tipis border GIF JJK 2 yang punya garis
+                              // Crop tipis border GIF yang punya garis
                               // transparan/putih di tepi beberapa frame.
                               scale: manualControl && footerGifsPlaying
                                   ? 1.08

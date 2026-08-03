@@ -21,13 +21,9 @@ import '../services/excel_importer.dart';
 import '../services/reminder_service.dart';
 import '../utils/app_style.dart';
 import '../utils/formatters.dart';
-import '../utils/theme_icon_media.dart';
 import '../widgets/page_header.dart';
 import '../widgets/theme_artwork.dart';
 import '../widgets/theme_customization_editor.dart';
-import '../widgets/theme_icon_view.dart';
-import '../widgets/theme_profile_icon_picker.dart';
-import '../widgets/looping_asset_video.dart';
 import '../widgets/custom_template_manager.dart';
 import 'receipts_screen.dart';
 import 'recurrings_screen.dart';
@@ -87,15 +83,14 @@ class SettingsScreen extends StatelessWidget {
     BuildContext context,
     SettingsProvider settings,
   ) async {
-    final profile = settings.activeCustomTheme;
-    if (profile == null) return;
+    final theme = settings.preset;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Hapus tema custom?'),
+        title: const Text('Hapus tema?'),
         content: Text(
-          '${profile.name} dan pengaturannya akan dihapus. '
-          'Transaksi serta template media tetap aman.',
+          '${theme.name} dan pengaturannya akan dihapus dari daftar. '
+          'Tema bawaan dapat dipulihkan; transaksi tetap aman.',
         ),
         actions: [
           TextButton(
@@ -109,20 +104,13 @@ class SettingsScreen extends StatelessWidget {
         ],
       ),
     );
-    if (confirmed == true) await settings.deleteCustomTheme(profile.id);
+    if (confirmed == true) await settings.deleteTheme(theme.id);
   }
 
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
-    final pickerThemes = [
-      for (final theme in settings.availableThemes)
-        if (theme.id != 'jjk2') ...[
-          theme,
-          if (theme.id == 'jjk')
-            settings.availableThemes.firstWhere((theme) => theme.id == 'jjk2'),
-        ],
-    ];
+    final pickerThemes = settings.availableThemes;
     return SafeArea(
       child: Column(
         children: [
@@ -138,7 +126,7 @@ class SettingsScreen extends StatelessWidget {
                 _Section(
                   icon: Icons.auto_awesome,
                   title: 'Tema Aplikasi',
-                  collapsible: true,
+                  collapsible: false,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -153,9 +141,6 @@ class SettingsScreen extends StatelessWidget {
                                   padding: const EdgeInsets.only(right: 8),
                                   child: _ThemeOption(
                                     theme: theme,
-                                    customIconKey: settings
-                                        .customThemeById(theme.id)
-                                        ?.iconKey,
                                     selected: theme.id == settings.preset.id,
                                     onTap: () => settings.setTheme(theme),
                                   ),
@@ -165,50 +150,48 @@ class SettingsScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 10),
-                      OutlinedButton.icon(
-                        onPressed: () => _addTheme(context, settings),
-                        icon: const Icon(Icons.add),
-                        label: const Text('Tambah tema custom'),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () => _addTheme(context, settings),
+                              icon: const Icon(Icons.add),
+                              label: const Text('Tambah tema custom'),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton.outlined(
+                            tooltip: settings.canDeleteTheme
+                                ? 'Hapus tema'
+                                : 'Minimal satu tema harus tersedia',
+                            onPressed: settings.canDeleteTheme
+                                ? () => _deleteTheme(context, settings)
+                                : null,
+                            icon: const Icon(Icons.delete_outline),
+                          ),
+                        ],
                       ),
-                      if (settings.activeCustomTheme case final profile?) ...[
+                      if (settings.activeCustomTheme != null) ...[
                         const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () =>
-                                    _renameTheme(context, settings),
-                                icon: const Icon(Icons.edit_outlined),
-                                label: const Text('Ubah nama'),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            IconButton.outlined(
-                              tooltip: 'Hapus tema',
-                              onPressed: () => _deleteTheme(context, settings),
-                              icon: const Icon(Icons.delete_outline),
-                            ),
-                          ],
+                        OutlinedButton.icon(
+                          onPressed: () => _renameTheme(context, settings),
+                          icon: const Icon(Icons.edit_outlined),
+                          label: const Text('Ubah nama'),
                         ),
+                      ],
+                      if (settings.hasHiddenBuiltInThemes) ...[
                         const SizedBox(height: 8),
-                        ThemeProfileIconPicker(
-                          iconKey: profile.iconKey ?? 'default',
-                          previewSeconds: profile.previewSeconds,
-                          color: settings.accent,
-                          onChanged: (value) =>
-                              settings.setCustomThemeIcon(profile.id, value),
-                          onPreviewSecondsChanged: (seconds) =>
-                              settings.setCustomThemePreviewSeconds(
-                                profile.id,
-                                seconds,
-                              ),
+                        TextButton.icon(
+                          onPressed: settings.restoreBuiltInThemes,
+                          icon: const Icon(Icons.restore),
+                          label: const Text('Pulihkan tema bawaan'),
                         ),
                       ],
                     ],
                   ),
                 ),
                 const SizedBox(height: 16),
-                const _Section(
+                _Section(
                   icon: Icons.tune,
                   title: 'Editor Tema Aktif',
                   collapsible: true,
@@ -219,33 +202,8 @@ class SettingsScreen extends StatelessWidget {
                   icon: Icons.wallpaper_outlined,
                   title: 'Template Background',
                   collapsible: true,
-                  child: Column(
-                    children: [
-                      GridView.count(
-                        crossAxisCount: 2,
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        mainAxisSpacing: 10,
-                        crossAxisSpacing: 10,
-                        childAspectRatio: 1.6,
-                        children: [
-                          for (final background in settings.themeBackgrounds)
-                            _BackgroundTemplateOption(
-                              background: background,
-                              selected:
-                                  settings.customBackground == null &&
-                                  background == settings.themeBackground,
-                              accent: settings.accent,
-                              onTap: () =>
-                                  settings.setFrierenRialBackground(background),
-                            ),
-                        ],
-                      ),
-                      const Divider(height: 28),
-                      const CustomTemplateManager(
-                        kind: CustomTemplateKind.background,
-                      ),
-                    ],
+                  child: const CustomTemplateManager(
+                    kind: CustomTemplateKind.background,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -372,15 +330,8 @@ class SettingsScreen extends StatelessWidget {
                       for (final style in CardStyle.values)
                         // Card "Call Duck" eksklusif tema Call Duck —
                         // di tema lain opsinya disembunyiin sepenuhnya.
-                        if ((style != CardStyle.callDuck ||
-                                settings.preset.id == 'call_duck') &&
-                            (!const {
-                                  CardStyle.jjkVideo1,
-                                  CardStyle.jjkVideo2,
-                                }.contains(style) ||
-                                settings.preset.id == 'jjk2') &&
-                            (!style.isFrierenRial ||
-                                settings.preset.id == 'frieren_rial'))
+                        if (style != CardStyle.callDuck ||
+                            settings.preset.id == 'call_duck')
                           _CardStyleOption(
                             style: style,
                             accent: settings.accent,
@@ -402,8 +353,8 @@ class SettingsScreen extends StatelessWidget {
                   title: 'Tampilan',
                   child: SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Mode Gelap'),
-                    subtitle: const Text('Tampilan gelap biar adem di mata'),
+                    title: Text('Mode Gelap'),
+                    subtitle: Text('Tampilan gelap biar adem di mata'),
                     value: settings.darkMode,
                     onChanged: settings.setDarkMode,
                   ),
@@ -1050,112 +1001,23 @@ class _PinSetting extends StatelessWidget {
   }
 }
 
-class _BackgroundTemplateOption extends StatelessWidget {
-  final FrierenRialBackground background;
-  final bool selected;
-  final Color accent;
-  final VoidCallback onTap;
-
-  const _BackgroundTemplateOption({
-    required this.background,
-    required this.selected,
-    required this.accent,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        clipBehavior: Clip.hardEdge,
-        decoration: BoxDecoration(
-          color: Colors.black,
-          gradient: background == FrierenRialBackground.defaultBackground
-              ? LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [accent.withValues(alpha: 0.6), Colors.black],
-                )
-              : null,
-          borderRadius: BorderRadius.circular(12),
-          border: selected ? Border.all(color: accent, width: 2) : null,
-          image: background.asset == null
-              ? null
-              : DecorationImage(
-                  image: AssetImage(background.asset!),
-                  fit: BoxFit.cover,
-                  alignment: Alignment.topCenter,
-                ),
-        ),
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      background.cardTone.withValues(alpha: 0.82),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              left: 8,
-              right: 8,
-              bottom: 7,
-              child: Text(
-                background.label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            if (selected)
-              Positioned(
-                top: 6,
-                right: 6,
-                child: Icon(Icons.check_circle, color: accent, size: 18),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 /// Satu pilihan tema penuh: emoji + nama + warna khasnya.
 class _ThemeOption extends StatelessWidget {
   final ThemePreset theme;
-  final String? customIconKey;
   final bool selected;
   final VoidCallback onTap;
 
   const _ThemeOption({
     required this.theme,
-    this.customIconKey,
     required this.selected,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final previewAsset = switch (theme.id) {
-      'jjk' => 'assets/theme/jjk/footer_transaksi_jjk.png',
-      'jjk2' => 'assets/theme/jjk2/footer_transaksi_static.png',
-      'call_duck' => 'assets/theme/call_duck/footer_transaksi_static.png',
-      'frieren_rial' => 'assets/theme/frieren_rial/footer_transaksi.png',
-      _ => null,
-    };
+    final settings = context.read<SettingsProvider>();
+    final footerTile = settings.footerTile(0, theme);
+    final staticAsset = settings.staticFooterTransactionAsset(theme);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
@@ -1177,59 +1039,24 @@ class _ThemeOption extends StatelessWidget {
               scale: selected ? 1.15 : 1.0,
               duration: const Duration(milliseconds: 250),
               curve: Curves.easeOutBack,
-              // Tema polos tanpa maskot dipreview pakai bulatan gradient
-              // warnanya; tema bergambar pakai artwork-nya.
-              child: customIconKey != null
-                  ? SizedBox.square(
-                      dimension: 44,
-                      child: Center(
-                        child: ThemeIconView(
-                          iconKey: customIconKey,
-                          size: 34,
-                          previewSeconds:
-                              context
-                                  .read<SettingsProvider>()
-                                  .customThemeById(theme.id)
-                                  ?.previewSeconds ??
-                              3,
-                          animate: selected,
-                          fallback: Icon(
-                            isThemeVideo(customIconKey)
-                                ? Icons.play_circle_outline
-                                : Icons.tune,
-                          ),
-                        ),
-                      ),
-                    )
-                  : previewAsset != null
+              // Pilihan tema selalu memakai footer Transaksi versi statis.
+              child: staticAsset != null
                   ? Image.asset(
-                      previewAsset,
+                      staticAsset,
                       width: 44,
                       height: 44,
                       fit: BoxFit.contain,
-                    )
-                  : !theme.showMascotIcon && theme.artwork == null
-                  ? Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            theme.defaultAccent,
-                            HSLColor.fromColor(
-                              theme.defaultAccent,
-                            ).withLightness(0.3).toColor(),
-                          ],
-                        ),
+                      errorBuilder: (_, _, _) => Icon(
+                        theme.icon,
+                        size: 28,
+                        color: theme.defaultAccent,
                       ),
                     )
                   : ThemeArtwork(
                       preset: theme,
-                      tile: 0,
+                      tile: footerTile,
                       size: 44,
+                      ignoreCustomization: true,
                       fallback: Icon(
                         theme.icon,
                         size: 28,
@@ -1238,7 +1065,7 @@ class _ThemeOption extends StatelessWidget {
                     ),
             ),
             const SizedBox(height: 6),
-            // FittedBox: nama tema panjang (misal SpongeBob) dikecilin
+            // FittedBox menjaga nama tema panjang tetap muat.
             // otomatis biar muat satu baris, ga kepotong/turun baris.
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -1604,13 +1431,6 @@ class _CardStyleOption extends StatelessWidget {
             ).colorScheme.onSurface.withValues(alpha: 0.1),
           ),
         );
-      case CardStyle.jjkVideo1:
-      case CardStyle.jjkVideo2:
-      case CardStyle.frierenRialVideo135:
-      case CardStyle.frierenRialVideo136:
-      case CardStyle.frierenRialVideo137:
-      case CardStyle.frierenRialVideo138:
-        return BoxDecoration(color: Colors.black, borderRadius: radius);
       case CardStyle.callDuck:
         return BoxDecoration(
           image: const DecorationImage(
@@ -1660,26 +1480,6 @@ class _CardStyleOption extends StatelessWidget {
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                ),
-                CardStyle.jjkVideo1 => const LoopingAssetVideo(
-                  asset: 'assets/theme/jjk2/card_saldo_1.mp4',
-                  quarterTurns: 3,
-                ),
-                CardStyle.jjkVideo2 => const LoopingAssetVideo(
-                  asset: 'assets/theme/jjk2/card_saldo_2.mp4',
-                  quarterTurns: 3,
-                ),
-                CardStyle.frierenRialVideo135 => const LoopingAssetVideo(
-                  asset: 'assets/theme/frieren_rial/card_saldo_135.mp4',
-                ),
-                CardStyle.frierenRialVideo136 => const LoopingAssetVideo(
-                  asset: 'assets/theme/frieren_rial/card_saldo_136.mp4',
-                ),
-                CardStyle.frierenRialVideo137 => const LoopingAssetVideo(
-                  asset: 'assets/theme/frieren_rial/card_saldo_137.mp4',
-                ),
-                CardStyle.frierenRialVideo138 => const LoopingAssetVideo(
-                  asset: 'assets/theme/frieren_rial/card_saldo_138.mp4',
                 ),
                 CardStyle.callDuck => const DecoratedBox(
                   decoration: BoxDecoration(

@@ -20,51 +20,10 @@ enum CardStyle {
   neon('Neon'),
   glass('Glass'),
   minimal('Minimal'),
-  jjkVideo1('JJK Video 1'),
-  jjkVideo2('JJK Video 2'),
-  frierenRialVideo135('Frieren Rial 135'),
-  frierenRialVideo136('Frieren Rial 136'),
-  frierenRialVideo137('Frieren Rial 137'),
-  frierenRialVideo138('Frieren Rial 138'),
   callDuck('Call Duck');
 
   final String label;
   const CardStyle(this.label);
-  bool get isFrierenRial => name.startsWith('frierenRialVideo');
-}
-
-enum FrierenRialBackground {
-  defaultBackground('Default', null, Color(0xFF334A70)),
-  eclipse(
-    'Eclipse',
-    'assets/theme/frieren_rial/background_eclipse.jpg',
-    Color(0xFF1D3970),
-  ),
-  journey(
-    'Journey',
-    'assets/theme/frieren_rial/background_journey.jpg',
-    Color(0xFF565C8A),
-  ),
-  meadow(
-    'Meadow',
-    'assets/theme/frieren_rial/background_meadow.jpg',
-    Color(0xFF236B58),
-  ),
-  lotus(
-    'Lotus',
-    'assets/theme/frieren_rial/background_lotus.jpg',
-    Color(0xFF526E8A),
-  ),
-  blueSky(
-    'Blue Sky',
-    'assets/theme/frieren_rial/background_blue_sky.jpg',
-    Color(0xFF167FB8),
-  );
-
-  final String label;
-  final String? asset;
-  final Color cardTone;
-  const FrierenRialBackground(this.label, this.asset, this.cardTone);
 }
 
 /// Pilihan font tampilan app — semua dibundel lokal (offline).
@@ -204,22 +163,40 @@ final _allThemePresets = [
     darkBackground: const [Color(0xFF0E1322), Color(0xFF141B30)],
   ),
   ThemePreset(
-    id: 'sage',
-    name: 'Sage',
-    icon: Icons.eco_outlined,
-    showMascotIcon: false,
-    defaultAccent: const Color(0xFF52796F),
-    lightBackground: const [Color(0xFFF5F7F2), Color(0xFFE4EBE1)],
-    darkBackground: const [Color(0xFF111916), Color(0xFF1A2823)],
+    id: 'klasik_2',
+    name: 'Klasik 2',
+    icon: Icons.savings_outlined,
+    artwork: 'assets/theme/classic_2',
+    defaultAccent: const Color(0xFFE58AB5),
+    lightBackground: const [Color(0xFFFFF5FA), Color(0xFFF7DDEB)],
+    darkBackground: const [Color(0xFF24131E), Color(0xFF35202D)],
   ),
   ThemePreset(
-    id: 'senja',
-    name: 'Senja',
-    icon: Icons.wb_twilight_outlined,
-    showMascotIcon: false,
-    defaultAccent: const Color(0xFFC65D3B),
-    lightBackground: const [Color(0xFFFFF7F2), Color(0xFFF7E2D7)],
-    darkBackground: const [Color(0xFF211411), Color(0xFF32201A)],
+    id: 'klasik_3',
+    name: 'Klasik 3',
+    icon: Icons.track_changes_outlined,
+    artwork: 'assets/theme/classic_3',
+    defaultAccent: const Color(0xFF596FD8),
+    lightBackground: const [Color(0xFFF4F6FF), Color(0xFFE2E6FF)],
+    darkBackground: const [Color(0xFF11162B), Color(0xFF1D2341)],
+  ),
+  ThemePreset(
+    id: 'klasik_4',
+    name: 'Klasik 4',
+    icon: Icons.account_balance_outlined,
+    artwork: 'assets/theme/classic_4',
+    defaultAccent: const Color(0xFF63B8AA),
+    lightBackground: const [Color(0xFFF2FBF8), Color(0xFFDDF3EC)],
+    darkBackground: const [Color(0xFF10201D), Color(0xFF18312C)],
+  ),
+  ThemePreset(
+    id: 'klasik_5',
+    name: 'Klasik 5',
+    icon: Icons.inventory_2_outlined,
+    artwork: 'assets/theme/classic_5',
+    defaultAccent: const Color(0xFFC8782A),
+    lightBackground: const [Color(0xFFFFF8EC), Color(0xFFF4E0BC)],
+    darkBackground: const [Color(0xFF25180B), Color(0xFF3A2512)],
   ),
   ThemePreset(
     id: 'kucing',
@@ -324,225 +301,13 @@ final _allThemePresets = [
         'Belum ada transaksi bulan ini, quak!\n'
         'Tekan tombol + buat nambahin.',
   ),
-  ThemePreset(
-    id: 'anya',
-    name: 'Anya',
-    icon: Icons.face_3,
-    emptyIcon: Icons.face_3,
-    artwork: 'assets/theme/anya',
-    defaultAccent: const Color(0xFFE88D9B),
-    lightBackground: const [Color(0xFFFFF5F7), Color(0xFFFBE3E8)],
-    darkBackground: const [Color(0xFF241417), Color(0xFF321C21)],
-    emptyText:
-        'Belum ada transaksi bulan ini. Waku waku!\n'
-        'Tekan tombol + buat nambahin.',
-  ),
-  ThemePreset(
-    id: 'jjk',
-    name: 'JJK 1',
-    icon: Icons.auto_awesome,
-    emptyIcon: Icons.auto_awesome,
-    artwork: 'assets/theme/jjk',
-    defaultAccent: const Color(0xFF5865A6),
-    lightBackground: const [Color(0xFFF5F4FA), Color(0xFFE5E7F2)],
-    darkBackground: const [Color(0xFF10121A), Color(0xFF1A1E2B)],
-    emptyText:
-        'Belum ada transaksi bulan ini.\n'
-        'Tekan tombol + buat mulai mencatat.',
-  ),
-  ThemePreset(
-    id: 'frieren',
-    name: 'Frieren',
-    icon: Icons.hourglass_empty,
-    emptyIcon: Icons.hourglass_empty,
-    artwork: 'assets/theme/frieren',
-    defaultAccent: const Color(0xFF7889C4),
-    lightBackground: const [Color(0xFFF7F8FF), Color(0xFFE7ECF8)],
-    darkBackground: const [Color(0xFF111522), Color(0xFF1B2333)],
-    emptyText:
-        'Belum ada transaksi bulan ini.\n'
-        'Perjalanan panjang dimulai dari satu catatan.',
-    fabGif: 'assets/theme/frieren/add_transaction.gif',
-    fabGifOffset: const Offset(2, -6),
-    // Tiap tab warnanya nyesuain karakter yang kepasang di footer-nya:
-    // Transaksi = Frieren (putih-lavender), Budget = Himmel (biru bunga —
-    // bunga biru langit yang jadi motif ikoniknya Himmel), Statistik =
-    // cewek rambut ungu, Setelan = Stark (merah).
-    tabAccents: const [
-      Color(0xFF8E97B8),
-      Color(0xFF6FA3D6),
-      Color(0xFF9587C2),
-      Color(0xFFC97A52),
-    ],
-    tabLightBackgrounds: const [
-      [Color(0xFFF7F8FF), Color(0xFFE7ECF8)],
-      [Color(0xFFF1F7FD), Color(0xFFDCEBF9)],
-      [Color(0xFFF6F3FB), Color(0xFFE7DFF5)],
-      [Color(0xFFFDF3EC), Color(0xFFF6E0CF)],
-    ],
-    tabDarkBackgrounds: const [
-      [Color(0xFF111522), Color(0xFF1B2333)],
-      [Color(0xFF0E1A26), Color(0xFF15283A)],
-      [Color(0xFF171325), Color(0xFF221C33)],
-      [Color(0xFF241710), Color(0xFF331F14)],
-    ],
-  ),
-  ThemePreset(
-    id: 'frieren_rial',
-    name: 'Frieren Rial',
-    icon: Icons.nightlight_round,
-    showMascotIcon: false,
-    defaultAccent: const Color(0xFF9AB7FF),
-    lightBackground: const [Color(0xFFF2F5FC), Color(0xFFDFE8F7)],
-    darkBackground: const [Color(0xFF121827), Color(0xFF1A2436)],
-    tabAccents: const [
-      Color(0xFF7896C8),
-      Color(0xFF8EACD6),
-      Color(0xFFA99BCB),
-      Color(0xFFD0AE69),
-    ],
-    tabLightBackgrounds: const [
-      [Color(0xFFF2F5FC), Color(0xFFDFE8F7)],
-      [Color(0xFFF0F5FB), Color(0xFFDDE8F5)],
-      [Color(0xFFF5F1FA), Color(0xFFE7DEF3)],
-      [Color(0xFFFBF5E9), Color(0xFFEFE2C7)],
-    ],
-    tabDarkBackgrounds: const [
-      [Color(0xFF121827), Color(0xFF1A2436)],
-      [Color(0xFF111B2A), Color(0xFF1B2A3D)],
-      [Color(0xFF191527), Color(0xFF272038)],
-      [Color(0xFF201A16), Color(0xFF332A1E)],
-    ],
-    fabGif: 'assets/theme/frieren_rial/add_transaction.gif',
-    tileGifs: const {
-      3: 'assets/theme/frieren_rial/footer_setelan.png',
-      6: 'assets/theme/frieren_rial/footer_transaksi.png',
-      7: 'assets/theme/frieren_rial/footer_budget.png',
-      8: 'assets/theme/frieren_rial/footer_statistik.png',
-    },
-    emptyText:
-        'Nabung ges.\n'
-        'karena pahlawan himmel akan melakukan hal yang sama.',
-  ),
-  ThemePreset(
-    id: 'spongebob',
-    name: 'SpongeBob',
-    // Placeholder sementara (belum ada artwork asli) — full hitam semua
-    // biar keliatan tema ini emang belum jadi, bukan lupa ganti.
-    icon: Icons.crop_square,
-    emptyIcon: Icons.crop_square,
-    artwork: 'assets/theme/spongebob',
-    defaultAccent: const Color(0xFFFFC914),
-    lightBackground: const [Color(0xFFFFFBEA), Color(0xFFFFF3C4)],
-    darkBackground: const [Color(0xFF221C08), Color(0xFF2E260D)],
-    emptyText:
-        'Belum ada transaksi bulan ini.\n'
-        'Siap sedia, Kapten! Tekan tombol + buat nyatet.',
-    fabGif: 'assets/theme/spongebob/add_transaction.gif',
-    // Header halaman Transaksi (home) pakai GIF animasi, sisanya PNG.
-    tileGifs: const {
-      0: 'assets/theme/spongebob/mascot_utama.gif',
-      1: 'assets/theme/spongebob/header_home.gif',
-    },
-    // Tiap tab warnanya ganti sesuai karakter yang beneran kepasang di
-    // footer-nya: Home/Transaksi = SpongeBob (kuning), Budget = Patrick
-    // (pink karang), Statistik = Gary (hijau mint — asetnya Gary bukan
-    // Sandy, makanya warnanya ijo bukan tan), Setelan = Squidward (teal).
-    tabAccents: const [
-      Color(0xFFFFC914),
-      Color(0xFFFA7268),
-      Color(0xFF7FB88F),
-      Color(0xFF4FB6AC),
-    ],
-    tabLightBackgrounds: const [
-      [Color(0xFFFFFBEA), Color(0xFFFFF3C4)],
-      [Color(0xFFFFF3F1), Color(0xFFFFDAD3)],
-      [Color(0xFFF3FAF0), Color(0xFFDFF2D8)],
-      [Color(0xFFEFFBFA), Color(0xFFD6F0EC)],
-    ],
-    tabDarkBackgrounds: const [
-      [Color(0xFF221C08), Color(0xFF2E260D)],
-      [Color(0xFF241210), Color(0xFF301714)],
-      [Color(0xFF141F13), Color(0xFF1D2B19)],
-      [Color(0xFF0E1F1D), Color(0xFF152B28)],
-    ],
-    // Sub-tab Budget beda karakter beda warna: Budget=Patrick(pink),
-    // Target=Squidward(teal), Utang=SpongeBob(kuning).
-    budgetSubTabLightBackgrounds: const [
-      [Color(0xFFFFF3F1), Color(0xFFFFDAD3)],
-      [Color(0xFFEFFBFA), Color(0xFFD6F0EC)],
-      [Color(0xFFFFFBEA), Color(0xFFFFF3C4)],
-    ],
-    budgetSubTabDarkBackgrounds: const [
-      [Color(0xFF241210), Color(0xFF301714)],
-      [Color(0xFF0E1F1D), Color(0xFF152B28)],
-      [Color(0xFF221C08), Color(0xFF2E260D)],
-    ],
-  ),
-  ThemePreset(
-    id: 'jjk2',
-    name: 'JJK 2',
-    // Placeholder sementara — icon Statistik/Setelan masih full hitam,
-    // header Home & Budget udah ada artnya (75/76), footer 4-4nya GIF.
-    icon: Icons.circle,
-    emptyIcon: Icons.circle,
-    artwork: 'assets/theme/jjk2',
-    defaultAccent: const Color(0xFF42A5FF),
-    lightBackground: const [Color(0xFFEAF5FF), Color(0xFFCFE8FF)],
-    darkBackground: const [Color(0xFF091828), Color(0xFF102A44)],
-    fabGif: 'assets/theme/jjk2/add_transaction.gif',
-    footerTransaksiGif: 'assets/theme/jjk2/footer_transaksi.gif',
-    tileGifs: const {
-      0: 'assets/theme/jjk2/mascot_utama.gif',
-      5: 'assets/theme/jjk2/footer_budget.gif',
-      9: 'assets/theme/jjk2/footer_statistik.gif',
-      15: 'assets/theme/jjk2/footer_setelan.gif',
-    },
-    // Semua footer GIF diem di PNG statis, muter bareng-bareng cuma
-    // kalau tombol play di bawah FAB dipencet (bukan auto-loop
-    // kayak spongebob/frieren, dan bukan per-tap — itu kerasa aneh
-    // soalnya nge-tap juga mindahin tab).
-    footerGifManualControl: true,
-    // Palet per karakter: Gojo, Sukuna, Yuta, lalu Yuji.
-    tabAccents: const [
-      Color(0xFF42A5FF),
-      Color(0xFFE04455),
-      Color(0xFF8066D6),
-      Color(0xFFE8883E),
-    ],
-    tabLightBackgrounds: const [
-      [Color(0xFFEAF5FF), Color(0xFFCFE8FF)],
-      [Color(0xFFFFF1F2), Color(0xFFFFD8DC)],
-      [Color(0xFFF4F1FF), Color(0xFFE1D9FA)],
-      [Color(0xFFFFF5E9), Color(0xFFF3D7BC)],
-    ],
-    tabDarkBackgrounds: const [
-      [Color(0xFF091828), Color(0xFF102A44)],
-      [Color(0xFF240C12), Color(0xFF3A121A)],
-      [Color(0xFF151124), Color(0xFF251C3B)],
-      [Color(0xFF24160C), Color(0xFF3B2415)],
-    ],
-  ),
-  ThemePreset(
-    id: 'matcha',
-    name: 'Matcha',
-    icon: Icons.emoji_food_beverage,
-    emptyIcon: Icons.emoji_food_beverage,
-    defaultAccent: const Color(0xFF6B9E78),
-    lightBackground: const [Color(0xFFF4F9F0), Color(0xFFE5F2DC)],
-    darkBackground: const [Color(0xFF121A12), Color(0xFF1B261B)],
-  ),
 ];
 
-const _liteThemeIds = {'kucing', 'bebek', 'call_duck'};
-final themePresets = appFlavor == 'lite'
-    ? _allThemePresets
-          .where((theme) => _liteThemeIds.contains(theme.id))
-          .toList()
-    : _allThemePresets;
+final themePresets = _allThemePresets;
 
 class SettingsProvider extends ChangeNotifier {
   static const _privacyChannel = MethodChannel('duit_ges/privacy');
+  static const _emptyThemeIcon = '__empty__';
   static const presetColors = categoryColorChoices;
 
   Color _accent = const Color(0xFF2E5BFF);
@@ -553,8 +318,6 @@ class SettingsProvider extends ChangeNotifier {
   int _activeTab = 0;
   bool _darkMode = false;
   CardStyle _cardStyle = CardStyle.gradient;
-  FrierenRialBackground _frierenRialBackground =
-      FrierenRialBackground.defaultBackground;
   int _monthStartDay = 1;
   int _trendMonths = 6;
   AppFont _font = AppFont.jakarta;
@@ -566,7 +329,6 @@ class SettingsProvider extends ChangeNotifier {
   bool _ready = false;
   bool _hideBalance = false;
   bool _hideWidgetBalance = false;
-  bool _hideWallets = false;
   bool _privacyMode = false;
   bool _reminderEnabled = false;
   TimeOfDay _reminderTime = const TimeOfDay(hour: 20, minute: 0);
@@ -579,13 +341,13 @@ class SettingsProvider extends ChangeNotifier {
   Map<String, String> _customCardIds = {};
   Map<String, String> _customBackgroundIds = {};
   Map<String, ThemeCustomization> _themeCustomizations = {};
+  Set<String> _hiddenBuiltInThemeIds = {};
   List<CustomThemeProfile> _customThemes = [
     const CustomThemeProfile(id: 'custom', name: 'Custom'),
   ];
 
   bool get hideBalance => _hideBalance;
   bool get hideWidgetBalance => _hideWidgetBalance;
-  bool get hideWallets => _hideWallets;
   bool get privacyMode => _privacyMode;
   bool get reminderEnabled => _reminderEnabled;
   TimeOfDay get reminderTime => _reminderTime;
@@ -607,80 +369,127 @@ class SettingsProvider extends ChangeNotifier {
     id: profile.id,
     name: profile.name,
     icon: Icons.tune,
-    showMascotIcon: false,
     defaultAccent: const Color(0xFF6750A4),
     lightBackground: const [Color(0xFFF8F7FC), Color(0xFFECE8F5)],
     darkBackground: const [Color(0xFF141218), Color(0xFF211E27)],
   );
 
   List<ThemePreset> get availableThemes => [
-    ...themePresets,
+    ...themePresets.where(
+      (theme) => !_hiddenBuiltInThemeIds.contains(theme.id),
+    ),
     ..._customThemes.map(_customPreset),
   ];
+  bool get hasHiddenBuiltInThemes => _hiddenBuiltInThemeIds.isNotEmpty;
+  bool get canDeleteTheme => availableThemes.length > 1;
   CustomTemplate? get customCard => _customById(_customCardIds[preset.id]);
   CustomTemplate? get customBackground =>
       _customById(_customBackgroundIds[preset.id]);
-  ThemeCustomization get themeCustomization =>
-      _themeCustomizations[preset.id] ?? const ThemeCustomization();
+  ThemeCustomization themeCustomizationFor(String themeId) =>
+      _themeCustomizations[themeId] ?? const ThemeCustomization();
+  ThemeCustomization get themeCustomization => themeCustomizationFor(preset.id);
   Offset get fabPlusOffset =>
       Offset(themeCustomization.plusX, themeCustomization.plusY);
-  String? themeArtwork(int tile) => themeCustomization.artwork[tile];
-  String? _themeIcon(String slot, String? legacy) {
-    final icons = themeCustomization.icons;
+  String? themeArtworkFor(String themeId, int tile) =>
+      themeCustomizationFor(themeId).artwork[tile];
+  String? themeArtwork(int tile) => themeArtworkFor(preset.id, tile);
+  String? themeIconOverrideFor(String themeId, String slot) {
+    final value = themeCustomizationFor(themeId).icons[slot];
+    return value == null || value.isEmpty || value == _emptyThemeIcon
+        ? null
+        : value;
+  }
+
+  String? themeIconOverride(String slot) =>
+      themeIconOverrideFor(preset.id, slot);
+
+  bool hasThemeIconOverrideFor(String themeId, String slot) =>
+      themeCustomizationFor(themeId).icons.containsKey(slot);
+  bool hasThemeIconOverride(String slot) =>
+      hasThemeIconOverrideFor(preset.id, slot);
+  bool isThemeIconEmptyFor(String themeId, String slot) =>
+      themeCustomizationFor(themeId).icons[slot] == _emptyThemeIcon;
+  bool isThemeIconEmpty(String slot) => isThemeIconEmptyFor(preset.id, slot);
+
+  String? _themeIconFor(String themeId, String slot, String? legacy) {
+    final icons = themeCustomizationFor(themeId).icons;
     if (!icons.containsKey(slot)) return legacy;
     final value = icons[slot]!;
-    return value.isEmpty ? null : value;
+    return value.isEmpty || value == _emptyThemeIcon ? null : value;
   }
 
-  String? headerArtwork(int index) {
+  String? headerArtworkFor(String themeId, int index) {
     final legacy = switch (index) {
-      0 => themeArtwork(1),
-      1 => themeArtwork(7) ?? themeArtwork(4) ?? themeArtwork(11),
-      2 => themeArtwork(8),
-      3 => themeArtwork(3),
+      0 => themeArtworkFor(themeId, 1),
+      1 =>
+        themeArtworkFor(themeId, 7) ??
+            themeArtworkFor(themeId, 4) ??
+            themeArtworkFor(themeId, 11),
+      2 => themeArtworkFor(themeId, 8),
+      3 => themeArtworkFor(themeId, 3),
       _ => null,
     };
-    return _themeIcon('header_$index', legacy);
+    return _themeIconFor(themeId, 'header_$index', legacy);
   }
 
-  int _legacyFooterTile(int index) => switch (index) {
-    0 =>
-      preset.id == 'frieren'
-          ? 2
-          : preset.id == 'jjk'
-          ? 10
-          : 6,
-    1 =>
-      const {'frieren', 'jjk', 'spongebob', 'jjk2'}.contains(preset.id) ? 5 : 7,
-    2 =>
-      const {'frieren', 'jjk', 'spongebob', 'jjk2'}.contains(preset.id) ? 9 : 8,
-    3 =>
-      preset.id == 'frieren'
-          ? 12
-          : preset.id == 'jjk'
-          ? 13
-          : preset.id == 'spongebob'
-          ? 14
-          : preset.id == 'jjk2'
-          ? 15
-          : 3,
-    _ => -1,
-  };
+  String? headerArtwork(int index) => headerArtworkFor(preset.id, index);
 
-  String? footerArtwork(int index) {
-    final tile = _legacyFooterTile(index);
-    return _themeIcon(
+  int footerTile(int index, [ThemePreset? target]) {
+    return switch (index) {
+      0 => 6,
+      1 => 7,
+      2 => 8,
+      3 => 3,
+      _ => -1,
+    };
+  }
+
+  String? staticFooterTransactionAsset([ThemePreset? target]) {
+    final theme = target ?? preset;
+    final asset =
+        theme.footerTransaksiGif ?? theme.tileGifs[footerTile(0, theme)];
+    return asset != null && asset.endsWith('.gif')
+        ? asset.replaceFirst('.gif', '_static.png')
+        : asset;
+  }
+
+  String? builtInThemeIconAsset(String slot) {
+    if (slot == 'footer_0') return staticFooterTransactionAsset();
+    if (slot != 'add_transaction') return null;
+    return switch (preset.id) {
+      'call_duck' => 'assets/theme/call_duck/add_transaction_static.png',
+      _ => preset.fabGif,
+    };
+  }
+
+  String? footerArtworkFor(String themeId, int index) {
+    final target = availableThemes.firstWhere(
+      (theme) => theme.id == themeId,
+      orElse: () => preset,
+    );
+    final tile = footerTile(index, target);
+    final customization = themeCustomizationFor(themeId);
+    return _themeIconFor(
+      themeId,
       'footer_$index',
-      themeCustomization.footerArtwork[index] ??
-          (tile >= 0 ? themeArtwork(tile) : null),
+      customization.footerArtwork[index] ??
+          (tile >= 0 ? themeArtworkFor(themeId, tile) : null),
     );
   }
 
-  String? get cardMascotArtwork => _themeIcon('card_mascot', themeArtwork(0));
+  String? footerArtwork(int index) => footerArtworkFor(preset.id, index);
+
+  String? cardMascotArtworkFor(String themeId) => _themeIconFor(
+    themeId,
+    'card_mascot',
+    themeArtworkFor(themeId, 0) ?? customThemeById(themeId)?.iconKey,
+  );
+  String? get cardMascotArtwork => cardMascotArtworkFor(preset.id);
   bool get hasCustomCardMascot =>
-      themeCustomization.icons['card_mascot']?.isNotEmpty == true;
-  String? get addTransactionArtwork =>
-      _themeIcon('add_transaction', themeArtwork(0));
+      hasThemeIconOverride('card_mascot') || activeCustomTheme?.iconKey != null;
+  String? addTransactionArtworkFor(String themeId) =>
+      _themeIconFor(themeId, 'add_transaction', themeArtworkFor(themeId, 0));
+  String? get addTransactionArtwork => addTransactionArtworkFor(preset.id);
   bool get hasAnimatedCustomFooter => List.generate(
     4,
     footerArtwork,
@@ -710,14 +519,6 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   CardStyle get cardStyle => _cardStyle;
-  FrierenRialBackground get frierenRialBackground => _frierenRialBackground;
-  FrierenRialBackground get themeBackground => preset.id == 'frieren_rial'
-      ? _frierenRialBackground
-      : FrierenRialBackground.defaultBackground;
-  List<FrierenRialBackground> get themeBackgrounds =>
-      preset.id == 'frieren_rial'
-      ? FrierenRialBackground.values
-      : const [FrierenRialBackground.defaultBackground];
   int get monthStartDay => _monthStartDay;
   int get trendMonths => _trendMonths;
   AppFont get font => _font;
@@ -802,9 +603,19 @@ class SettingsProvider extends ChangeNotifier {
         ];
       }
     }
-    _themeId = prefs.getString('themeId') ?? 'klasik';
+    _hiddenBuiltInThemeIds = (prefs.getStringList('hiddenBuiltInThemes') ?? [])
+        .where((id) => themePresets.any((theme) => theme.id == id))
+        .toSet();
+    final savedThemeId = prefs.getString('themeId') ?? 'klasik';
+    _themeId = switch (savedThemeId) {
+      'sage' => 'klasik_4',
+      'senja' => 'klasik_2',
+      _ => savedThemeId,
+    };
     if (!availableThemes.any((theme) => theme.id == _themeId)) {
-      _themeId = themePresets.first.id;
+      _themeId = availableThemes.first.id;
+      await prefs.setString('themeId', _themeId);
+    } else if (_themeId != savedThemeId) {
       await prefs.setString('themeId', _themeId);
     }
     _toneId =
@@ -817,28 +628,14 @@ class SettingsProvider extends ChangeNotifier {
     _darkMode = prefs.getBool('darkMode') ?? false;
     final savedStyle = prefs.getString('cardStyle');
     if (savedStyle != null) {
-      _cardStyle = savedStyle == 'frierenRialVideo'
-          ? CardStyle.frierenRialVideo135
-          : CardStyle.values.asNameMap()[savedStyle] ?? _cardStyle;
+      _cardStyle = CardStyle.values.asNameMap()[savedStyle] ?? _cardStyle;
     }
-    _frierenRialBackground =
-        FrierenRialBackground.values.asNameMap()[prefs.getString(
-          'frierenRialBackground',
-        )] ??
-        FrierenRialBackground.defaultBackground;
     _monthStartDay = (prefs.getInt('monthStartDay') ?? 1).clamp(1, 28);
     _trendMonths = (prefs.getInt('trendMonths') ?? 6).clamp(1, 12);
     // Kartu "Call Duck" eksklusif buat tema itu — kalau kesimpen kombinasi
     // yang gak nyambung (misal abis ganti tema manual di luar setTheme),
     // balikin ke default biar gak nampilin card khusus tema lain.
     if (_cardStyle == CardStyle.callDuck && _themeId != 'call_duck') {
-      _cardStyle = CardStyle.gradient;
-    }
-    if (const {CardStyle.jjkVideo1, CardStyle.jjkVideo2}.contains(_cardStyle) &&
-        _themeId != 'jjk2') {
-      _cardStyle = CardStyle.gradient;
-    }
-    if (_cardStyle.isFrierenRial && _themeId != 'frieren_rial') {
       _cardStyle = CardStyle.gradient;
     }
     final savedFont = prefs.getString('font');
@@ -849,7 +646,6 @@ class SettingsProvider extends ChangeNotifier {
     _pinHash = prefs.getString('pinHash');
     _hideBalance = prefs.getBool('hideBalance') ?? false;
     _hideWidgetBalance = prefs.getBool('hideWidgetBalance') ?? false;
-    _hideWallets = prefs.getBool('hideWallets') ?? false;
     _privacyMode = prefs.getBool('privacyMode') ?? false;
     unawaited(_applyPrivacyMode(_privacyMode));
     _reminderEnabled = prefs.getBool('reminderEnabled') ?? false;
@@ -906,6 +702,25 @@ class SettingsProvider extends ChangeNotifier {
       );
     } catch (_) {
       _themeCustomizations = {};
+    }
+    for (final migration in const {
+      'sage': 'klasik_4',
+      'senja': 'klasik_2',
+    }.entries) {
+      final oldCustomization = _themeCustomizations.remove(migration.key);
+      if (oldCustomization != null &&
+          !_themeCustomizations.containsKey(migration.value)) {
+        _themeCustomizations[migration.value] = oldCustomization;
+      }
+      final oldCard = _customCardIds.remove(migration.key);
+      if (oldCard != null && !_customCardIds.containsKey(migration.value)) {
+        _customCardIds[migration.value] = oldCard;
+      }
+      final oldBackground = _customBackgroundIds.remove(migration.key);
+      if (oldBackground != null &&
+          !_customBackgroundIds.containsKey(migration.value)) {
+        _customBackgroundIds[migration.value] = oldBackground;
+      }
     }
     _ready = true;
     notifyListeners();
@@ -1028,27 +843,18 @@ class SettingsProvider extends ChangeNotifier {
         prefs.getString('themeTone_${theme.id}') ??
         (theme.tones.isEmpty ? null : theme.tones.first.id);
     _accent = tone?.accent ?? theme.defaultAccent;
-    if (theme.id == 'frieren_rial') _darkMode = true;
     // Kartu "Call Duck" eksklusif buat tema itu — masuk tema ini
     // otomatis pakai kartunya, keluar dari tema ini balik ke default
     // biar gak nyangkut dipakai tema lain yang gak nyambung asetnya.
     if (theme.id == 'call_duck') {
       _cardStyle = CardStyle.callDuck;
-    } else if (theme.id == 'frieren_rial') {
-      _cardStyle = CardStyle.frierenRialVideo135;
     } else if (_cardStyle == CardStyle.callDuck) {
-      _cardStyle = CardStyle.gradient;
-    } else if (_cardStyle.isFrierenRial) {
-      _cardStyle = CardStyle.gradient;
-    } else if (theme.id != 'jjk2' &&
-        const {CardStyle.jjkVideo1, CardStyle.jjkVideo2}.contains(_cardStyle)) {
       _cardStyle = CardStyle.gradient;
     }
     notifyListeners();
     await prefs.setString('themeId', theme.id);
     await prefs.setInt('accent', _accent.toARGB32());
     await prefs.setString('cardStyle', _cardStyle.name);
-    if (theme.id == 'frieren_rial') await prefs.setBool('darkMode', true);
     _syncWidget();
   }
 
@@ -1103,25 +909,35 @@ class SettingsProvider extends ChangeNotifier {
     await _saveCustomThemes();
   }
 
-  Future<void> deleteCustomTheme(String id) async {
+  Future<void> deleteTheme(String id) async {
+    if (!canDeleteTheme) return;
     final profile = customThemeById(id);
-    if (profile == null) return;
+    final builtIn = themePresets.any((theme) => theme.id == id);
+    if (profile == null && !builtIn) return;
     final customization = _themeCustomizations[id];
-    _customThemes.removeWhere((theme) => theme.id == id);
+    if (profile != null) {
+      _customThemes.removeWhere((theme) => theme.id == id);
+    } else {
+      _hiddenBuiltInThemeIds.add(id);
+    }
     _themeCustomizations.remove(id);
     _customCardIds.remove(id);
     _customBackgroundIds.remove(id);
     if (_themeId == id) {
-      _themeId = themePresets.first.id;
+      _themeId = availableThemes.first.id;
       _toneId = null;
       _accent = preset.defaultAccent;
     }
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('themeId', _themeId);
+    await prefs.setStringList(
+      'hiddenBuiltInThemes',
+      _hiddenBuiltInThemeIds.toList()..sort(),
+    );
     await _saveSelectedTemplates(prefs);
     await _saveThemeCustomizations();
     await _saveCustomThemes();
-    final path = themeIconPath(profile.iconKey);
+    final path = themeIconPath(profile?.iconKey);
     if (path != null) {
       File(path).delete().ignore();
       File('$path.preview.png').delete().ignore();
@@ -1133,6 +949,16 @@ class SettingsProvider extends ChangeNotifier {
     }) {
       _deleteReplacedThemeMedia(key, null);
     }
+  }
+
+  Future<void> deleteCustomTheme(String id) => deleteTheme(id);
+
+  Future<void> restoreBuiltInThemes() async {
+    if (_hiddenBuiltInThemeIds.isEmpty) return;
+    _hiddenBuiltInThemeIds.clear();
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('hiddenBuiltInThemes');
   }
 
   Future<void> _saveCustomThemes() async {
@@ -1180,20 +1006,6 @@ class SettingsProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('cardStyle', style.name);
     await prefs.remove('customCardId');
-    await _saveSelectedTemplates(prefs);
-  }
-
-  Future<void> setFrierenRialBackground(
-    FrierenRialBackground background,
-  ) async {
-    _customBackgroundIds.remove(preset.id);
-    if (preset.id == 'frieren_rial') _frierenRialBackground = background;
-    notifyListeners();
-    final prefs = await SharedPreferences.getInstance();
-    if (preset.id == 'frieren_rial') {
-      await prefs.setString('frierenRialBackground', background.name);
-    }
-    await prefs.remove('customBackgroundId');
     await _saveSelectedTemplates(prefs);
   }
 
@@ -1350,6 +1162,25 @@ class SettingsProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> useBuiltInThemeIcon(String slot) async {
+    final current = themeCustomization;
+    if (!current.icons.containsKey(slot)) return;
+    final icons = {...current.icons};
+    final oldKey = icons.remove(slot);
+    _themeCustomizations[preset.id] = current.copyWith(icons: icons);
+    await _saveThemeCustomizations();
+    if (oldKey != null &&
+        oldKey.isNotEmpty &&
+        !_themeMediaInUse(themeCustomization, oldKey)) {
+      _deleteReplacedThemeMedia(oldKey, null);
+    }
+  }
+
+  Future<void> useCustomThemeIcon(String slot) => _setThemeIcon(slot, null);
+
+  Future<void> useEmptyThemeIcon(String slot) =>
+      _setThemeIcon(slot, _emptyThemeIcon);
+
   bool _themeMediaInUse(ThemeCustomization customization, String key) {
     final path = themeIconPath(key);
     if (path == null) return false;
@@ -1405,13 +1236,6 @@ class SettingsProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('darkMode', value);
     _syncWidget();
-  }
-
-  Future<void> setHideWallets(bool value) async {
-    _hideWallets = value;
-    notifyListeners();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('hideWallets', value);
   }
 
   Future<void> setPrivacyMode(bool value) async {

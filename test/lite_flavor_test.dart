@@ -12,16 +12,21 @@ void main() {
     () async {
       expect(appFlavor, 'lite');
       expect(themePresets.map((theme) => theme.id), {
+        'klasik',
+        'klasik_2',
+        'klasik_3',
+        'klasik_4',
+        'klasik_5',
         'kucing',
         'bebek',
         'call_duck',
       });
       final settings = SettingsProvider();
-      SharedPreferences.setMockInitialValues({'themeId': 'jjk2'});
+      SharedPreferences.setMockInitialValues({'themeId': 'tema_lama'});
       await settings.load();
       expect(settings.availableThemes.last.id, 'custom');
 
-      expect(settings.preset.id, 'kucing');
+      expect(settings.preset.id, 'klasik');
     },
     skip: appFlavor != 'lite',
   );

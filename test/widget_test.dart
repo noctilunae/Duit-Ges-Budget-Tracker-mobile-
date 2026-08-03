@@ -423,6 +423,79 @@ void main() {
     expect(restored.customThemeById(first.id), isNull);
   });
 
+  test('tema bawaan bisa dikustomisasi, dihapus, dan dipulihkan', () async {
+    SharedPreferences.setMockInitialValues({});
+    final settings = SettingsProvider();
+    await settings.load();
+    await settings.setTheme(
+      themePresets.firstWhere((theme) => theme.id == 'klasik_2'),
+    );
+    await settings.setCardMascotArtwork('image:1.00:/tmp/pink-mascot.png');
+    expect(
+      settings.cardMascotArtworkFor('klasik_2'),
+      'image:1.00:/tmp/pink-mascot.png',
+    );
+
+    await settings.deleteTheme('klasik_2');
+    expect(
+      settings.availableThemes.map((theme) => theme.id),
+      isNot(contains('klasik_2')),
+    );
+    expect(settings.preset.id, isNot('klasik_2'));
+    expect(settings.hasHiddenBuiltInThemes, isTrue);
+
+    final restored = SettingsProvider();
+    await restored.load();
+    expect(
+      restored.availableThemes.map((theme) => theme.id),
+      isNot(contains('klasik_2')),
+    );
+    await restored.restoreBuiltInThemes();
+    expect(
+      restored.availableThemes.map((theme) => theme.id),
+      contains('klasik_2'),
+    );
+  });
+
+  test('tema Sage dan Senja lama dimigrasikan ke seri Klasik', () async {
+    SharedPreferences.setMockInitialValues({'themeId': 'sage'});
+    final sage = SettingsProvider();
+    await sage.load();
+    expect(sage.preset.id, 'klasik_4');
+
+    SharedPreferences.setMockInitialValues({'themeId': 'senja'});
+    final senja = SettingsProvider();
+    await senja.load();
+    expect(senja.preset.id, 'klasik_2');
+  });
+
+  test('resolver ikon khusus dan maskot kosong tersimpan', () async {
+    SharedPreferences.setMockInitialValues({});
+    final settings = SettingsProvider();
+    await settings.load();
+
+    await settings.setTheme(
+      themePresets.firstWhere((theme) => theme.id == 'call_duck'),
+    );
+    expect(
+      settings.staticFooterTransactionAsset(),
+      'assets/theme/call_duck/footer_transaksi_static.png',
+    );
+    expect(
+      settings.builtInThemeIconAsset('add_transaction'),
+      'assets/theme/call_duck/add_transaction_static.png',
+    );
+
+    await settings.useEmptyThemeIcon('card_mascot');
+    expect(settings.isThemeIconEmpty('card_mascot'), isTrue);
+    expect(settings.cardMascotArtwork, isNull);
+    final restored = SettingsProvider();
+    await restored.load();
+    expect(restored.isThemeIconEmpty('card_mascot'), isTrue);
+    await restored.useBuiltInThemeIcon('card_mascot');
+    expect(restored.hasThemeIconOverride('card_mascot'), isFalse);
+  });
+
   test('ikon tema GIF/video punya format dan batas tanpa kompresi', () {
     expect(themeIconPath(storedThemeGif('/tmp/a.gif')), '/tmp/a.gif');
     expect(themeIconPath(storedThemeVideo('/tmp/a.mp4')), '/tmp/a.mp4');
@@ -461,9 +534,12 @@ void main() {
     final editor = File(
       'lib/widgets/theme_customization_editor.dart',
     ).readAsStringSync();
-    expect(editor, contains('Kelola ikon custom'));
+    expect(editor, contains("Text('Kelola ikon'"));
     expect(editor, contains("label: 'Maskot Kartu Saldo'"));
     expect(editor, contains("label: 'Tombol Tambah Transaksi'"));
+    expect(editor, contains("child: Text('Ikon bawaan')"));
+    expect(editor, contains("child: Text('Ikon custom')"));
+    expect(editor, contains("child: Text('Kosong')"));
     expect(editor, isNot(contains('Konten Target')));
     expect(editor, isNot(contains('Artwork dan ikon')));
     expect(editor, contains('ThemeProfileIconPicker('));
@@ -616,12 +692,10 @@ void main() {
     await settings.load();
     expect(settings.ready, isTrue);
     expect(settings.preset.id, 'kucing');
-    await settings.setHideWallets(true);
     await settings.setHideWidgetBalance(true);
     await settings.setPrivacyMode(true);
     final restored = SettingsProvider();
     await restored.load();
-    expect(restored.hideWallets, isTrue);
     expect(restored.hideWidgetBalance, isTrue);
     expect(restored.privacyMode, isTrue);
   });
@@ -658,124 +732,41 @@ void main() {
     expect(SettingsProvider.presetColors, hasLength(35));
     final cat = themePresets.firstWhere((theme) => theme.id == 'kucing');
     final duck = themePresets.firstWhere((theme) => theme.id == 'bebek');
-    final anya = themePresets.firstWhere((theme) => theme.id == 'anya');
-    final jjk = themePresets.firstWhere((theme) => theme.id == 'jjk');
-    final jjk2 = themePresets.firstWhere((theme) => theme.id == 'jjk2');
     final callDuck = themePresets.firstWhere(
       (theme) => theme.id == 'call_duck',
     );
-    final frieren = themePresets.firstWhere((theme) => theme.id == 'frieren');
-    final frierenRial = themePresets.firstWhere(
-      (theme) => theme.id == 'frieren_rial',
-    );
+    final classic2 = themePresets.firstWhere((theme) => theme.id == 'klasik_2');
+    final classic3 = themePresets.firstWhere((theme) => theme.id == 'klasik_3');
+    final classic4 = themePresets.firstWhere((theme) => theme.id == 'klasik_4');
+    final classic5 = themePresets.firstWhere((theme) => theme.id == 'klasik_5');
+    expect(themePresets.map((theme) => theme.id), isNot(contains('sage')));
+    expect(themePresets.map((theme) => theme.id), isNot(contains('senja')));
+    expect(classic2.name, 'Klasik 2');
+    expect(classic2.artwork, 'assets/theme/classic_2');
+    expect(classic3.name, 'Klasik 3');
+    expect(classic3.artwork, 'assets/theme/classic_3');
+    expect(classic4.name, 'Klasik 4');
+    expect(classic4.artwork, 'assets/theme/classic_4');
+    expect(classic5.name, 'Klasik 5');
+    expect(classic5.artwork, 'assets/theme/classic_5');
     expect(cat.artwork, 'assets/theme/cat');
     expect(duck.artwork, 'assets/theme/duck');
-    expect(anya.artwork, 'assets/theme/anya');
-    expect(jjk.artwork, 'assets/theme/jjk');
-    expect(frieren.artwork, 'assets/theme/frieren');
-    expect(frierenRial.name, 'Frieren Rial');
-    expect(frierenRial.tileGifs, {
-      3: 'assets/theme/frieren_rial/footer_setelan.png',
-      6: 'assets/theme/frieren_rial/footer_transaksi.png',
-      7: 'assets/theme/frieren_rial/footer_budget.png',
-      8: 'assets/theme/frieren_rial/footer_statistik.png',
-    });
     expect(duck.defaultAccent, const Color(0xFFF5B82E));
-    expect(jjk2.tabAccents, const [
-      Color(0xFF42A5FF),
-      Color(0xFFE04455),
-      Color(0xFF8066D6),
-      Color(0xFFE8883E),
-    ]);
+    expect(themePresets.map((theme) => theme.id), {
+      'klasik',
+      'klasik_2',
+      'klasik_3',
+      'klasik_4',
+      'klasik_5',
+      'kucing',
+      'bebek',
+      'call_duck',
+    });
     expect(callDuck.footerGifManualControl, isTrue);
     expect(callDuck.fabGif, 'assets/theme/call_duck/add_transaction.gif');
     expect(callDuck.tileGifs[0], isNull);
     expect(cat.tones.map((tone) => tone.id), ['pink', 'blue', 'yellow']);
     expect(duck.tones.map((tone) => tone.id), ['yellow', 'blue', 'pink']);
-  });
-
-  test('template background Frieren Rial eksklusif dan tersimpan', () async {
-    SharedPreferences.setMockInitialValues({});
-    final settings = SettingsProvider();
-    await settings.load();
-    await settings.setTheme(
-      themePresets.firstWhere((theme) => theme.id == 'frieren_rial'),
-    );
-    expect(settings.darkMode, isTrue);
-    expect(settings.cardStyle, CardStyle.frierenRialVideo135);
-    expect(
-      settings.frierenRialBackground,
-      FrierenRialBackground.defaultBackground,
-    );
-    expect(FrierenRialBackground.values, hasLength(6));
-    expect(FrierenRialBackground.eclipse.asset, isNotNull);
-    expect(FrierenRialBackground.journey.asset, isNotNull);
-    expect(
-      FrierenRialBackground.values.skip(1).every((b) => b.asset != null),
-      isTrue,
-    );
-
-    await settings.setFrierenRialBackground(FrierenRialBackground.meadow);
-    final restored = SettingsProvider();
-    await restored.load();
-    expect(restored.frierenRialBackground, FrierenRialBackground.meadow);
-    expect(restored.cardStyle, CardStyle.frierenRialVideo135);
-    await restored.setTheme(
-      themePresets.firstWhere((theme) => theme.id == 'klasik'),
-    );
-    expect(restored.cardStyle, CardStyle.gradient);
-  });
-
-  test(
-    'semua tema punya konfigurasi background default tanpa menghapus pilihan Frieren',
-    () async {
-      SharedPreferences.setMockInitialValues({
-        'frierenRialBackground': FrierenRialBackground.meadow.name,
-      });
-      final settings = SettingsProvider();
-      await settings.load();
-      expect(settings.themeBackgrounds, [
-        FrierenRialBackground.defaultBackground,
-      ]);
-      expect(settings.themeBackground, FrierenRialBackground.defaultBackground);
-
-      await settings.setFrierenRialBackground(
-        FrierenRialBackground.defaultBackground,
-      );
-      await settings.setTheme(
-        themePresets.firstWhere((theme) => theme.id == 'frieren_rial'),
-      );
-      expect(settings.frierenRialBackground, FrierenRialBackground.meadow);
-      expect(settings.themeBackgrounds, FrierenRialBackground.values);
-    },
-  );
-
-  testWidgets('placeholder hitam JJK 2 memakai footer statis', (tester) async {
-    SharedPreferences.setMockInitialValues({});
-    final settings = SettingsProvider();
-    await settings.load();
-    await settings.setTheme(
-      themePresets.firstWhere((theme) => theme.id == 'jjk2'),
-    );
-    const expectedAssets = {
-      3: 'assets/theme/jjk2/footer_setelan_static.png',
-      4: 'assets/theme/jjk2/footer_budget_static.png',
-      6: 'assets/theme/jjk2/footer_budget_static.png',
-      7: 'assets/theme/jjk2/footer_budget_static.png',
-      8: 'assets/theme/jjk2/footer_statistik_static.png',
-      11: 'assets/theme/jjk2/footer_budget_static.png',
-    };
-
-    for (final entry in expectedAssets.entries) {
-      await tester.pumpWidget(
-        ChangeNotifierProvider.value(
-          value: settings,
-          child: MaterialApp(home: ThemeArtwork(tile: entry.key, size: 88)),
-        ),
-      );
-      final image = tester.widget<Image>(find.byType(Image));
-      expect((image.image as AssetImage).assetName, entry.value);
-    }
   });
 
   test('instalasi baru langsung memakai tema klasik', () async {
@@ -784,6 +775,19 @@ void main() {
     await settings.load();
     expect(settings.preset.id, 'klasik');
     expect(settings.accent, const Color(0xFF2E5BFF));
+  });
+
+  testWidgets('Budget Klasik memakai ikon kategori bawaan', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final settings = SettingsProvider();
+    await settings.load();
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: settings,
+        child: const MaterialApp(home: ThemeArtwork(tile: 7, size: 48)),
+      ),
+    );
+    expect(find.byIcon(Icons.savings_outlined), findsOneWidget);
   });
 
   test('varian warna mengganti aset dan aksen tema aktif', () async {
@@ -798,21 +802,6 @@ void main() {
     expect(settings.accent, const Color(0xFF5D9EDB));
   });
 
-  test('template video JJK 2 kembali default saat ganti tema', () async {
-    SharedPreferences.setMockInitialValues({});
-    final settings = SettingsProvider();
-    await settings.load();
-    await settings.setTheme(
-      themePresets.firstWhere((theme) => theme.id == 'jjk2'),
-    );
-    await settings.setCardStyle(CardStyle.jjkVideo1);
-    expect(settings.cardStyle, CardStyle.jjkVideo1);
-    await settings.setTheme(
-      themePresets.firstWhere((theme) => theme.id == 'klasik'),
-    );
-    expect(settings.cardStyle, CardStyle.gradient);
-  });
-
   testWidgets('PNG tema tersedia di bundle aplikasi', (_) async {
     // Dipakai semua tema.
     const universalNames = [
@@ -820,20 +809,10 @@ void main() {
       'header_home',
       'header_setelan',
       'konten_budget',
-      'footer_transaksi_default',
+      'footer_transaksi_2',
       'header_budget',
       'header_statistik',
       'konten_target',
-    ];
-    // Cuma diminta pas tema frieren/jjk aktif (lihat main_shell.dart) —
-    // di tema lain filenya sengaja ga ada biar ga numpang di APK.
-    const friJjkOnlyNames = [
-      'footer_transaksi_frieren',
-      'footer_budget',
-      'footer_statistik',
-      'footer_transaksi_jjk',
-      'footer_setelan_frieren',
-      'footer_setelan_jjk',
     ];
     for (final theme in [
       'cat',
@@ -842,47 +821,37 @@ void main() {
       'duck',
       'duck_blue',
       'duck_pink',
-      'anya',
-      'jjk',
-      'frieren',
-      'spongebob',
-      'jjk2',
     ]) {
       for (final name in universalNames) {
         final data = await rootBundle.load('assets/theme/$theme/$name.png');
         expect(data.lengthInBytes, greaterThan(0));
       }
     }
-    for (final theme in ['jjk', 'frieren']) {
-      for (final name in friJjkOnlyNames) {
+    const classicNames = [
+      'mascot_utama',
+      'header_home',
+      'footer_transaksi_1',
+      'header_setelan',
+      'konten_budget',
+      'footer_budget',
+      'footer_transaksi_2',
+      'header_budget',
+      'header_statistik',
+      'footer_statistik',
+      'footer_transaksi_3',
+      'konten_target',
+      'footer_setelan_1',
+      'footer_setelan_2',
+      'footer_setelan_3',
+      'footer_setelan_4',
+    ];
+    for (final theme in ['classic_2', 'classic_3', 'classic_4', 'classic_5']) {
+      for (final name in classicNames) {
         final data = await rootBundle.load('assets/theme/$theme/$name.png');
         expect(data.lengthInBytes, greaterThan(0));
       }
     }
-    // Spongebob punya slot footer sendiri (tile 5/9/14).
-    for (final name in [
-      'footer_budget',
-      'footer_statistik',
-      'footer_setelan',
-    ]) {
-      final data = await rootBundle.load('assets/theme/spongebob/$name.png');
-      expect(data.lengthInBytes, greaterThan(0));
-    }
     for (final path in [
-      'assets/theme/frieren/add_transaction.gif',
-      'assets/theme/spongebob/add_transaction.gif',
-      'assets/theme/spongebob/header_home.gif',
-      'assets/theme/spongebob/mascot_utama.gif',
-      'assets/theme/jjk2/add_transaction.gif',
-      'assets/theme/jjk2/add_transaction_idle.gif',
-      'assets/theme/jjk2/mascot_utama.gif',
-      'assets/theme/jjk2/visibility.gif',
-      'assets/theme/jjk2/footer_transaksi.gif',
-      'assets/theme/jjk2/footer_budget.gif',
-      'assets/theme/jjk2/footer_statistik.gif',
-      'assets/theme/jjk2/footer_setelan.gif',
-      'assets/theme/jjk2/card_saldo_1.mp4',
-      'assets/theme/jjk2/card_saldo_2.mp4',
       'assets/theme/call_duck/add_transaction.gif',
       'assets/theme/call_duck/add_transaction_static.png',
       'assets/theme/call_duck/footer_transaksi.gif',
@@ -895,43 +864,14 @@ void main() {
       'assets/theme/call_duck/footer_budget_static.png',
       'assets/theme/call_duck/footer_statistik_static.png',
       'assets/theme/call_duck/footer_setelan_static.png',
-      'assets/theme/frieren_rial/background_eclipse.jpg',
-      'assets/theme/frieren_rial/background_journey.jpg',
-      'assets/theme/frieren_rial/background_meadow.jpg',
-      'assets/theme/frieren_rial/background_lotus.jpg',
-      'assets/theme/frieren_rial/background_blue_sky.jpg',
-      'assets/theme/frieren_rial/add_transaction.gif',
-      'assets/theme/frieren_rial/card_saldo_135.mp4',
-      'assets/theme/frieren_rial/card_saldo_136.mp4',
-      'assets/theme/frieren_rial/card_saldo_137.mp4',
-      'assets/theme/frieren_rial/card_saldo_138.mp4',
-      'assets/theme/frieren_rial/footer_transaksi.png',
-      'assets/theme/frieren_rial/footer_budget.png',
-      'assets/theme/frieren_rial/footer_statistik.png',
-      'assets/theme/frieren_rial/footer_setelan.png',
-      'assets/theme/frieren_rial/visibility.png',
     ]) {
       final gif = await rootBundle.load(path);
       expect(gif.lengthInBytes, greaterThan(0));
     }
-    // Static PNG pendamping tiap GIF footer jjk2 (footerGifManualControl).
-    for (final name in [
-      'footer_transaksi',
-      'footer_budget',
-      'footer_statistik',
-      'footer_setelan',
-    ]) {
-      final data = await rootBundle.load(
-        'assets/theme/jjk2/${name}_static.png',
-      );
-      expect(data.lengthInBytes, greaterThan(0));
-    }
-    for (final theme in ['frieren', 'jjk', 'anya', 'spongebob', 'call_duck']) {
-      final visibility = await rootBundle.load(
-        'assets/theme/$theme/visibility.png',
-      );
-      expect(visibility.lengthInBytes, greaterThan(0));
-    }
+    final visibility = await rootBundle.load(
+      'assets/theme/call_duck/visibility.png',
+    );
+    expect(visibility.lengthInBytes, greaterThan(0));
   });
 
   testWidgets('GIF tema bisa di-decode codec Flutter (bukan cuma ada)', (
@@ -944,18 +884,6 @@ void main() {
     // ga bisa di dalam fake-async zone-nya testWidgets.
     await tester.runAsync(() async {
       for (final path in [
-        'assets/theme/frieren/add_transaction.gif',
-        'assets/theme/spongebob/add_transaction.gif',
-        'assets/theme/spongebob/header_home.gif',
-        'assets/theme/spongebob/mascot_utama.gif',
-        'assets/theme/jjk2/add_transaction.gif',
-        'assets/theme/jjk2/add_transaction_idle.gif',
-        'assets/theme/jjk2/mascot_utama.gif',
-        'assets/theme/jjk2/visibility.gif',
-        'assets/theme/jjk2/footer_transaksi.gif',
-        'assets/theme/jjk2/footer_budget.gif',
-        'assets/theme/jjk2/footer_statistik.gif',
-        'assets/theme/jjk2/footer_setelan.gif',
         'assets/theme/call_duck/add_transaction.gif',
         'assets/theme/call_duck/footer_transaksi.gif',
         'assets/theme/call_duck/footer_budget.gif',

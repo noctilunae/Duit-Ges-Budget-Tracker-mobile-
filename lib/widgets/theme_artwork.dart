@@ -7,14 +7,6 @@ import 'theme_icon_view.dart';
 /// Menampilkan PNG transparan sesuai fungsi ikon pada tema aktif.
 class ThemeArtwork extends StatelessWidget {
   static const _footerFallbacks = {
-    'jjk2': {
-      3: 'assets/theme/jjk2/footer_setelan_static.png',
-      4: 'assets/theme/jjk2/footer_budget_static.png',
-      6: 'assets/theme/jjk2/footer_budget_static.png',
-      7: 'assets/theme/jjk2/footer_budget_static.png',
-      8: 'assets/theme/jjk2/footer_statistik_static.png',
-      11: 'assets/theme/jjk2/footer_budget_static.png',
-    },
     'call_duck': {
       3: 'assets/theme/call_duck/footer_setelan_static.png',
       7: 'assets/theme/call_duck/footer_budget_static.png',
@@ -25,20 +17,20 @@ class ThemeArtwork extends StatelessWidget {
   static const _names = [
     'mascot_utama',
     'header_home',
-    'footer_transaksi_frieren',
+    'footer_transaksi_1',
     'header_setelan',
     'konten_budget',
     'footer_budget',
-    'footer_transaksi_default',
+    'footer_transaksi_2',
     'header_budget',
     'header_statistik',
     'footer_statistik',
-    'footer_transaksi_jjk',
+    'footer_transaksi_3',
     'konten_target',
-    'footer_setelan_frieren',
-    'footer_setelan_jjk',
-    'footer_setelan',
-    'footer_setelan_jjk2',
+    'footer_setelan_1',
+    'footer_setelan_2',
+    'footer_setelan_3',
+    'footer_setelan_4',
   ];
 
   final int tile;
@@ -77,14 +69,21 @@ class ThemeArtwork extends StatelessWidget {
     final theme = preset ?? settings.preset;
     final artwork = preset == null ? settings.artwork : theme.artwork;
     final footerFallback = _footerFallbacks[theme.id]?[tile];
-    final custom = preset == null && !ignoreCustomization
+    final iconSlot = headerIndex != null
+        ? 'header_$headerIndex'
+        : cardMascot
+        ? 'card_mascot'
+        : addTransaction
+        ? 'add_transaction'
+        : null;
+    final custom = !ignoreCustomization
         ? headerIndex != null
-              ? settings.headerArtwork(headerIndex!)
+              ? settings.headerArtworkFor(theme.id, headerIndex!)
               : cardMascot
-              ? settings.cardMascotArtwork
+              ? settings.cardMascotArtworkFor(theme.id)
               : addTransaction
-              ? settings.addTransactionArtwork
-              : settings.themeArtwork(tile)
+              ? settings.addTransactionArtworkFor(theme.id)
+              : settings.themeArtworkFor(theme.id, tile)
         : null;
 
     if (custom != null) {
@@ -95,6 +94,23 @@ class ThemeArtwork extends StatelessWidget {
         animate: animateCustom,
         continuous: animateCustom,
         fallback: fallback ?? const Icon(Icons.broken_image_outlined),
+      );
+    }
+    if (!ignoreCustomization &&
+        iconSlot != null &&
+        settings.isThemeIconEmptyFor(theme.id, iconSlot)) {
+      return const SizedBox.shrink();
+    }
+    if (!ignoreCustomization &&
+        iconSlot != null &&
+        settings.hasThemeIconOverrideFor(theme.id, iconSlot)) {
+      return SizedBox.square(
+        dimension: size,
+        child: Center(
+          child:
+              fallback ??
+              Icon(theme.icon, size: size * 0.58, color: theme.defaultAccent),
+        ),
       );
     }
 
@@ -127,12 +143,15 @@ class ThemeArtwork extends StatelessWidget {
     if (artwork == null) {
       // Tema polos (misal Klasik): ga nampilin icon maskot sama sekali.
       if (!theme.showMascotIcon) return const SizedBox.shrink();
+      final icon = theme.id == 'klasik' && const {4, 5, 7, 11}.contains(tile)
+          ? Icons.savings_outlined
+          : theme.icon;
       return SizedBox.square(
         dimension: size,
         child: Center(
           child:
               fallback ??
-              Icon(theme.icon, size: size * 0.58, color: theme.defaultAccent),
+              Icon(icon, size: size * 0.58, color: theme.defaultAccent),
         ),
       );
     }
