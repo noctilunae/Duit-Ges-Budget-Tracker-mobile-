@@ -548,7 +548,22 @@ class SettingsProvider extends ChangeNotifier {
     final icons = themeCustomizationFor(themeId).icons;
     if (!icons.containsKey(slot)) return legacy;
     final value = icons[slot]!;
-    return value.isEmpty || value == _emptyThemeIcon ? null : value;
+    if (value.isNotEmpty && value != _emptyThemeIcon) return value;
+    final pairedSlot = switch (slot) {
+      'header_0' => 'footer_0',
+      'header_1' => 'footer_1',
+      'header_2' => 'footer_2',
+      'header_3' => 'footer_3',
+      'footer_0' => 'header_0',
+      'footer_1' => 'header_1',
+      'footer_2' => 'header_2',
+      'footer_3' => 'header_3',
+      _ => null,
+    };
+    final paired = pairedSlot == null ? null : icons[pairedSlot];
+    return paired == null || paired.isEmpty || paired == _emptyThemeIcon
+        ? null
+        : paired;
   }
 
   String? headerArtworkFor(String themeId, int index) {
@@ -638,7 +653,9 @@ class SettingsProvider extends ChangeNotifier {
   String? cardMascotArtworkFor(String themeId) => _themeIconFor(
     themeId,
     'card_mascot',
-    themeArtworkFor(themeId, 0) ?? customThemeById(themeId)?.iconKey,
+    themeId == 'jjk2'
+        ? null
+        : themeArtworkFor(themeId, 0) ?? customThemeById(themeId)?.iconKey,
   );
   String? get cardMascotArtwork => cardMascotArtworkFor(preset.id);
   bool get hasCustomCardMascot =>
@@ -1323,6 +1340,23 @@ class SettingsProvider extends ChangeNotifier {
     // String kosong adalah reset eksplisit agar fallback versi lama tidak
     // muncul lagi setelah pengguna menekan Hapus.
     icons[slot] = iconKey ?? '';
+    final pairedSlot = switch (slot) {
+      'header_0' => 'footer_0',
+      'header_1' => 'footer_1',
+      'header_2' => 'footer_2',
+      'header_3' => 'footer_3',
+      'footer_0' => 'header_0',
+      'footer_1' => 'header_1',
+      'footer_2' => 'header_2',
+      'footer_3' => 'header_3',
+      _ => null,
+    };
+    if (iconKey != null &&
+        iconKey.isNotEmpty &&
+        pairedSlot != null &&
+        const {'', _emptyThemeIcon}.contains(icons[pairedSlot])) {
+      icons[pairedSlot] = iconKey;
+    }
     _themeCustomizations[preset.id] = current.copyWith(icons: icons);
     await _saveThemeCustomizations();
     if (oldKey != null &&

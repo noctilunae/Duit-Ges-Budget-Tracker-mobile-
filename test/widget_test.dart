@@ -457,6 +457,51 @@ void main() {
     );
   });
 
+  test('header dan footer kosong memakai ikon pasangan satu halaman', () async {
+    SharedPreferences.setMockInitialValues({});
+    final settings = SettingsProvider();
+    await settings.load();
+    await settings.useCustomThemeIcon('footer_1');
+    await settings.setHeaderArtwork(1, 'emoji:💰');
+    expect(settings.footerArtwork(1), 'emoji:💰');
+
+    await settings.useCustomThemeIcon('header_2');
+    await settings.setFooterArtwork(2, 'emoji:📊');
+    expect(settings.headerArtwork(2), 'emoji:📊');
+
+    await settings.useEmptyThemeIcon('footer_3');
+    await settings.setHeaderArtwork(3, 'emoji:⚙️');
+    expect(settings.footerArtwork(3), 'emoji:⚙️');
+    expect(settings.cardMascotArtwork, isNull);
+  });
+
+  testWidgets('JJK 2 memakai pasangan footer dan tanpa maskot saldo bawaan', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final settings = SettingsProvider();
+    await settings.load();
+    await settings.setTheme(
+      themePresets.firstWhere((theme) => theme.id == 'jjk2'),
+    );
+
+    expect(settings.cardMascotArtwork, isNull);
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: settings,
+        child: const MaterialApp(
+          home: ThemeArtwork(tile: 8, size: 96, headerIndex: 2),
+        ),
+      ),
+    );
+    final image = tester.widget<Image>(find.byType(Image));
+    expect(
+      (image.image as AssetImage).assetName,
+      'assets/theme/jjk2/footer_statistik_static.png',
+    );
+  });
+
   test('tema Sage dan Senja lama dimigrasikan ke seri Klasik', () async {
     SharedPreferences.setMockInitialValues({'themeId': 'sage'});
     final sage = SettingsProvider();

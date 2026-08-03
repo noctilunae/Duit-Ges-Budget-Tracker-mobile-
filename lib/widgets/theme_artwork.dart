@@ -94,7 +94,13 @@ class ThemeArtwork extends StatelessWidget {
     final settings = context.watch<SettingsProvider>();
     final theme = preset ?? settings.preset;
     final artwork = preset == null ? settings.artwork : theme.artwork;
-    final footerFallback = _footerFallbacks[theme.id]?[tile];
+    final effectiveTile =
+        theme.id == 'jjk2' &&
+            headerIndex != null &&
+            const {2, 3}.contains(headerIndex)
+        ? settings.footerTile(headerIndex!, theme)
+        : tile;
+    final footerFallback = _footerFallbacks[theme.id]?[effectiveTile];
     final iconSlot = headerIndex != null
         ? 'header_$headerIndex'
         : cardMascot
@@ -139,6 +145,7 @@ class ThemeArtwork extends StatelessWidget {
         ),
       );
     }
+    if (cardMascot && theme.id == 'jjk2') return const SizedBox.shrink();
 
     if (footerFallback != null) {
       return Image.asset(
@@ -153,7 +160,7 @@ class ThemeArtwork extends StatelessWidget {
     // Tile tertentu bisa berupa GIF animasi. RepaintBoundary penting:
     // tanpa itu tiap ganti frame GIF ikut nge-repaint seluruh layar
     // (bikin lag), sama boundary repaint-nya kekunci di area GIF doang.
-    final tileGif = theme.tileGifs[tile];
+    final tileGif = theme.tileGifs[effectiveTile];
     if (tileGif != null) {
       return RepaintBoundary(
         child: Image.asset(
@@ -169,7 +176,8 @@ class ThemeArtwork extends StatelessWidget {
     if (artwork == null) {
       // Tema polos (misal Klasik): ga nampilin icon maskot sama sekali.
       if (!theme.showMascotIcon) return const SizedBox.shrink();
-      final icon = theme.id == 'klasik' && const {4, 5, 7, 11}.contains(tile)
+      final icon =
+          theme.id == 'klasik' && const {4, 5, 7, 11}.contains(effectiveTile)
           ? Icons.savings_outlined
           : theme.icon;
       return SizedBox.square(
@@ -184,7 +192,7 @@ class ThemeArtwork extends StatelessWidget {
 
     final names = _legacyThemes.contains(theme.id) ? _legacyNames : _names;
     return Image.asset(
-      '$artwork/${names[tile]}.png',
+      '$artwork/${names[effectiveTile]}.png',
       width: size,
       height: size,
       fit: BoxFit.contain,
