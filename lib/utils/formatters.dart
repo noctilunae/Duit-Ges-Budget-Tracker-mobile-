@@ -35,13 +35,24 @@ class RibuanInputFormatter extends TextInputFormatter {
     TextEditingValue newValue,
   ) {
     var digits = newValue.text.replaceAll('.', '');
+    var digitsBeforeCursor = newValue.text
+        .substring(0, newValue.selection.end.clamp(0, newValue.text.length))
+        .replaceAll('.', '')
+        .length;
+    // Shortcut nominal: ketikan pertama "5" langsung jadi "5.000".
+    if (oldValue.text.isEmpty && digits.length == 1) digits += '000';
     // Buang nol di depan (misal "0500" jadi "500"), sisain satu nol doang.
     digits = digits.replaceFirst(RegExp(r'^0+(?=\d)'), '');
     if (digits.isEmpty) return const TextEditingValue(text: '');
     final formatted = groupRibuan(digits);
+    var cursor = 0;
+    while (cursor < formatted.length && digitsBeforeCursor > 0) {
+      if (formatted[cursor] != '.') digitsBeforeCursor--;
+      cursor++;
+    }
     return TextEditingValue(
       text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
+      selection: TextSelection.collapsed(offset: cursor),
     );
   }
 }

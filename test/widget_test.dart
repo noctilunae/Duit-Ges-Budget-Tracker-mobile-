@@ -730,6 +730,29 @@ void main() {
     expect(format('').text, '');
   });
 
+  test('RibuanInputFormatter menambah tiga nol saat mulai mengetik', () {
+    final formatter = RibuanInputFormatter();
+    final first = formatter.formatEditUpdate(
+      TextEditingValue.empty,
+      const TextEditingValue(
+        text: '5',
+        selection: TextSelection.collapsed(offset: 1),
+      ),
+    );
+    expect(first.text, '5.000');
+    expect(first.selection.baseOffset, 1);
+
+    final second = formatter.formatEditUpdate(
+      first,
+      const TextEditingValue(
+        text: '50.000',
+        selection: TextSelection.collapsed(offset: 2),
+      ),
+    );
+    expect(second.text, '50.000');
+    expect(second.selection.baseOffset, 2);
+  });
+
   test('SettingsProvider menandai data siap setelah load', () async {
     SharedPreferences.setMockInitialValues({'themeId': 'kucing'});
     final settings = SettingsProvider();
