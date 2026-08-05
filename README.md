@@ -1,8 +1,6 @@
 # Duit Ges
 
-Duit Ges adalah aplikasi pencatat keuangan pribadi untuk Android. Transaksi,
-budget, target tabungan, utang-piutang, dan pengaturan disimpan lokal di
-perangkat tanpa memerlukan akun atau server.
+Halo ges ini aplikasi seneng seneng doang jadi mohon maaf kalo jelek, ini nyaris full vibe coded jadi kalau ada request bisa langsung minta ato ubah langsung pake repo yang ini, bedanya cuma asset full ga ku push soalnya banyak nyolong di pinterest wkwk, moga ni app bisa bikin enak recap keuangan kalian ya ges
 
 ## Fitur utama
 
