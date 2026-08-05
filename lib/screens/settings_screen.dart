@@ -21,6 +21,7 @@ import '../services/excel_importer.dart';
 import '../services/reminder_service.dart';
 import '../utils/app_style.dart';
 import '../utils/formatters.dart';
+import '../widgets/looping_asset_video.dart';
 import '../widgets/page_header.dart';
 import '../widgets/theme_artwork.dart';
 import '../widgets/theme_customization_editor.dart';
@@ -330,7 +331,8 @@ class SettingsScreen extends StatelessWidget {
                       for (final style in CardStyle.values)
                         // Card "Call Duck" eksklusif tema Call Duck —
                         // di tema lain opsinya disembunyiin sepenuhnya.
-                        if ((style != CardStyle.callDuck ||
+                        if (style != CardStyle.frierenRialVideo138 &&
+                            (style != CardStyle.callDuck ||
                                 settings.preset.id == 'call_duck') &&
                             (!const {
                                   CardStyle.jjkVideo1,
@@ -1394,6 +1396,18 @@ class _CardStyleOption extends StatelessWidget {
     required this.onTap,
   });
 
+  String? get _videoAsset => switch (style) {
+    CardStyle.jjkVideo1 => 'assets/theme/jjk2/card_saldo_1.mp4',
+    CardStyle.jjkVideo2 => 'assets/theme/jjk2/card_saldo_2.mp4',
+    CardStyle.frierenRialVideo135 =>
+      'assets/theme/frieren_rial/card_saldo_135.mp4',
+    CardStyle.frierenRialVideo136 =>
+      'assets/theme/frieren_rial/card_saldo_136.mp4',
+    CardStyle.frierenRialVideo137 =>
+      'assets/theme/frieren_rial/card_saldo_137.mp4',
+    _ => null,
+  };
+
   BoxDecoration _previewDecoration(BuildContext context) {
     final hsl = HSLColor.fromColor(accent);
     final bright = hsl
@@ -1501,6 +1515,9 @@ class _CardStyleOption extends StatelessWidget {
                       colors: [Color(0xCCFFF8EC), Color(0x33FFF8EC)],
                     ),
                   ),
+                ),
+                _ when _videoAsset != null => LoopingAssetVideo(
+                  asset: _videoAsset!,
                 ),
                 _ => null,
               },

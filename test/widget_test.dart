@@ -655,6 +655,18 @@ void main() {
     expect(salaryRule, contains('read<BudgetProvider>().load();'));
   });
 
+  test(
+    'preview kartu video tampil dan Frieren 138 disembunyikan kompatibel',
+    () {
+      final settings = File(
+        'lib/screens/settings_screen.dart',
+      ).readAsStringSync();
+      expect(settings, contains('LoopingAssetVideo('));
+      expect(settings, contains('style != CardStyle.frierenRialVideo138'));
+      expect(CardStyle.values, contains(CardStyle.frierenRialVideo138));
+    },
+  );
+
   test('categoryById fallback ke kategori terakhir kalau id tidak dikenal', () {
     expect(categoryById('makanan').name, 'Makanan');
     expect(categoryById('ga-ada').id, 'lainnya_masuk');
