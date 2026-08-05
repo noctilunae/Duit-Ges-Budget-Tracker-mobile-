@@ -15,6 +15,10 @@ import 'screens/main_shell.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Tema punya banyak GIF besar; batas bawaan 100 MB terlalu boros untuk app ini.
+  PaintingBinding.instance.imageCache
+    ..maximumSize = 200
+    ..maximumSizeBytes = 32 << 20;
   // Load data nama bulan/hari bahasa Indonesia buat package intl.
   await initializeDateFormatting('id_ID');
   runApp(const DuitGesApp());

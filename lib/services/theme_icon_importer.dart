@@ -131,6 +131,10 @@ abstract final class ThemeIconImporter {
           : candidate.path;
       final path = '${directory.path}/theme_icon_$id.mp4';
       await File(source).copy(path);
+      await CustomTemplateImporter.deleteTemporary(source);
+      if (source != candidate.path) {
+        await CustomTemplateImporter.deleteTemporary(candidate.path);
+      }
       return storedThemeVideo(path);
     }
 
@@ -147,6 +151,10 @@ abstract final class ThemeIconImporter {
     final path = '${directory.path}/theme_icon_$id.gif';
     await File(path).writeAsBytes(result.gif, flush: true);
     await File('$path.preview.png').writeAsBytes(result.preview, flush: true);
+    await CustomTemplateImporter.deleteTemporary(candidate.path);
+    await CustomTemplateImporter.deleteTemporary(
+      '${candidate.path}.preview.png',
+    );
     return storedThemeGif(path);
   }
 }

@@ -121,11 +121,12 @@ class _ReceiptsScreenState extends State<ReceiptsScreen> {
   Future<void> _deleteUnused(List<_StoredImageInfo> items) async {
     final unused = items.where((item) => !item.used).toList();
     if (unused.isEmpty) return;
+    final noun = widget.icons ? 'ikon' : 'foto';
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Bersihkan foto?'),
-        content: Text('${unused.length} foto yang ga dipakai akan dihapus.'),
+        title: Text('Bersihkan $noun?'),
+        content: Text('${unused.length} $noun yang ga dipakai akan dihapus.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -197,7 +198,7 @@ class _ReceiptsScreenState extends State<ReceiptsScreen> {
                         style: TextStyle(fontSize: 13, color: muted),
                       ),
                       const Spacer(),
-                      if (!widget.icons && items.any((item) => !item.used))
+                      if (items.any((item) => !item.used))
                         TextButton(
                           onPressed: () => _deleteUnused(items),
                           child: const Text('Bersihkan'),

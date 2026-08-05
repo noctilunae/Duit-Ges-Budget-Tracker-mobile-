@@ -119,6 +119,15 @@ abstract final class CustomTemplateImporter {
     final directory = Directory('${documents.path}/custom_templates');
     await directory.create(recursive: true);
     final extension = media == CustomTemplateMedia.video ? 'mp4' : 'jpg';
-    return (await File(source).copy('${directory.path}/$id.$extension')).path;
+    final saved = await File(source).copy('${directory.path}/$id.$extension');
+    await deleteTemporary(source);
+    return saved.path;
+  }
+
+  static Future<void> deleteTemporary(String path) async {
+    final temp = await getTemporaryDirectory();
+    if (path.startsWith('${temp.path}${Platform.pathSeparator}')) {
+      await File(path).delete().catchError((_) => File(path));
+    }
   }
 }
