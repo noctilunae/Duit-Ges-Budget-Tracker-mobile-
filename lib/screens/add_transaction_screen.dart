@@ -12,7 +12,6 @@ import '../models/wallet.dart';
 import '../providers/category_provider.dart';
 import '../providers/transaction_provider.dart';
 import '../providers/wallet_provider.dart';
-import '../services/receipt_ocr.dart';
 import '../utils/formatters.dart';
 import '../utils/stored_icon.dart';
 import '../widgets/custom_image_icon_picker.dart';
@@ -54,17 +53,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   final _unsavedReceiptPaths = <String>{};
   bool _saving = false;
 
-  /// Nominal sekarang lagi nilai hasil bacaan OCR (belum diubah manual)
-  /// — dipakai buat nampilin badge "dari OCR" di tile foto struk.
-  bool _amountFromOcr = false;
-  bool _settingAmountProgrammatically = false;
-
   bool get _isEdit => widget.existing != null;
 
   @override
   void initState() {
     super.initState();
-    _amountController.addListener(_onAmountEditedByUser);
     final seed = widget.existing ?? widget.draft;
     if (seed != null) {
       _type = widget.transactionType ?? seed.type;
@@ -88,18 +81,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     for (final path in _unsavedReceiptPaths) {
       File(path).delete().ignore();
     }
-    _amountController.removeListener(_onAmountEditedByUser);
     _amountController.dispose();
     _noteController.dispose();
     _amountFocus.dispose();
     super.dispose();
-  }
-
-  /// Begitu user ngetik ubah nominal sendiri, badge "dari OCR" ilang —
-  /// biar ga nyesatin (angkanya udah bukan murni bacaan struk lagi).
-  void _onAmountEditedByUser() {
-    if (_settingAmountProgrammatically || !_amountFromOcr) return;
-    setState(() => _amountFromOcr = false);
   }
 
   Future<void> _pickDate() async {
@@ -174,7 +159,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         _amountController.clear();
         _noteController.clear();
         _receiptPath = null;
-        _amountFromOcr = false;
       });
       _amountFocus.requestFocus();
       ScaffoldMessenger.of(context).showSnackBar(
@@ -220,43 +204,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     _unsavedReceiptPaths.add(path);
     setState(() => _receiptPath = path);
     _discardUnsavedReceipt(previous);
-    if (appFlavor != 'lite') await _scanReceipt(path);
   }
 
   void _discardUnsavedReceipt(String? path) {
     if (path == null || !_unsavedReceiptPaths.remove(path)) return;
     File(path).delete().ignore();
-  }
-
-  /// OCR struk (offline, ML Kit): isi nominal otomatis kalau field
-  /// masih kosong — hasil tebakan tetap bisa diedit user.
-  Future<void> _scanReceipt(String path) async {
-    if (_amountController.text.isNotEmpty) return;
-    final total = await ReceiptOcr.scanTotal(path);
-    if (!mounted) return;
-    if (total == null) {
-      // Ketauan gagal/ga nemu, bukan diem-diem aja — biar user ga nebak.
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Ga berhasil baca nominal dari struk, isi manual ya'),
-        ),
-      );
-      return;
-    }
-    if (_amountController.text.isNotEmpty) return; // user keburu ngetik
-    _settingAmountProgrammatically = true;
-    setState(() {
-      _amountController.text = groupRibuan(total.round().toString());
-      _amountFromOcr = true;
-    });
-    _settingAmountProgrammatically = false;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Nominal kebaca dari struk: ${rupiah(total)} — cek lagi ya',
-        ),
-      ),
-    );
   }
 
   void _showReceiptPicker() {
@@ -374,14 +326,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           const SizedBox(height: 12),
           _ReceiptTile(
             hasReceipt: _receiptPath != null,
-            fromOcr: _amountFromOcr,
-            ocrEnabled: appFlavor != 'lite',
             onTap: _showReceiptPicker,
             onRemove: () {
               _discardUnsavedReceipt(_receiptPath);
               setState(() {
                 _receiptPath = null;
-                _amountFromOcr = false;
               });
             },
           ),
@@ -542,20 +491,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   }
 }
 
-/// Tile foto struk. Kalau nominal lagi hasil bacaan OCR, tile-nya
-/// di-highlight (border + badge) biar user sadar itu tebakan mesin,
-/// bukan yang dia ketik sendiri — dan wajib dicek ulang.
 class _ReceiptTile extends StatelessWidget {
   final bool hasReceipt;
-  final bool fromOcr;
-  final bool ocrEnabled;
   final VoidCallback onTap;
   final VoidCallback onRemove;
 
   const _ReceiptTile({
     required this.hasReceipt,
-    required this.fromOcr,
-    required this.ocrEnabled,
     required this.onTap,
     required this.onRemove,
   });
@@ -565,64 +507,19 @@ class _ReceiptTile extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final muted = scheme.onSurfaceVariant;
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 250),
-      curve: Curves.easeOut,
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        color: fromOcr ? scheme.primary.withValues(alpha: 0.08) : null,
-        border: fromOcr
-            ? Border.all(color: scheme.primary.withValues(alpha: 0.4))
-            : null,
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-        leading: Icon(
-          fromOcr ? Icons.document_scanner : Icons.receipt_long,
-          size: 20,
-          color: fromOcr ? scheme.primary : null,
-        ),
-        title: Row(
-          children: [
-            Text(hasReceipt ? 'Foto struk terpasang' : 'Tambah foto struk'),
-            if (fromOcr) ...[
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: scheme.primary,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text(
-                  'dari OCR',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-        subtitle: Text(
-          fromOcr
-              ? 'Nominal ke-isi otomatis — cek lagi ya'
-              : ocrEnabled
-              ? 'Opsional, nominal dibaca otomatis'
-              : 'Opsional, simpan foto struk',
-          style: fromOcr ? TextStyle(color: scheme.primary) : null,
-        ),
-        trailing: hasReceipt
-            ? IconButton(
-                tooltip: 'Hapus foto struk',
-                onPressed: onRemove,
-                icon: Icon(Icons.close, color: muted),
-              )
-            : const Icon(Icons.chevron_right),
-        onTap: onTap,
-      ),
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+      leading: const Icon(Icons.receipt_long, size: 20),
+      title: Text(hasReceipt ? 'Foto struk terpasang' : 'Tambah foto struk'),
+      subtitle: const Text('Opsional, simpan foto struk'),
+      trailing: hasReceipt
+          ? IconButton(
+              tooltip: 'Hapus foto struk',
+              onPressed: onRemove,
+              icon: Icon(Icons.close, color: muted),
+            )
+          : const Icon(Icons.chevron_right),
+      onTap: onTap,
     );
   }
 }

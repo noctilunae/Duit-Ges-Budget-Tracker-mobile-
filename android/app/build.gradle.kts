@@ -87,7 +87,6 @@ kotlin {
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
     implementation("androidx.media3:media3-transformer:1.9.2")
-    "fullImplementation"("com.google.mlkit:text-recognition:16.0.1")
 }
 
 flutter {

@@ -1,7 +1,6 @@
 package com.noctilune.duitges
 
 import android.net.Uri
-import android.content.Context
 import android.view.WindowManager
 import androidx.annotation.OptIn
 import androidx.media3.common.Effect
@@ -25,15 +24,6 @@ class AppActivity : FlutterActivity() {
     @OptIn(UnstableApi::class)
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        if (BuildConfig.FLAVOR == "full") {
-            Class.forName("com.noctilune.duitges.FullReceiptOcr")
-                .getMethod(
-                    "register",
-                    Context::class.java,
-                    FlutterEngine::class.java,
-                )
-                .invoke(null, applicationContext, flutterEngine)
-        }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "duit_ges/privacy")
             .setMethodCallHandler { call, result ->
                 if (call.method != "setSecure") {

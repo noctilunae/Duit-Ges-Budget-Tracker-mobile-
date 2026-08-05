@@ -19,8 +19,8 @@ perangkat tanpa memerlukan akun atau server.
 
 | Flavor | Isi |
 | --- | --- |
-| `full` | Seluruh fitur, termasuk pemindaian struk dengan OCR. |
-| `lite` | Fitur keuangan dan tema yang sama tanpa model OCR agar APK lebih kecil. |
+| `full` | Seluruh fitur dan tema bawaan. |
+| `lite` | Fitur keuangan yang sama dengan pilihan tema bawaan lebih ringkas. |
 
 Kedua flavor memakai application ID dan penyimpanan aplikasi yang sama,
 sehingga pengguna dapat memperbarui Full ke Lite atau sebaliknya tanpa
