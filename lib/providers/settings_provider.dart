@@ -332,6 +332,25 @@ final _allThemePresets = [
     darkBackground: const [Color(0xFF10121A), Color(0xFF1A1E2B)],
   ),
   ThemePreset(
+    id: 'jjk2',
+    name: 'JJK 2',
+    icon: Icons.circle,
+    emptyIcon: Icons.circle,
+    artwork: 'assets/theme/jjk2',
+    fabGif: 'assets/theme/jjk2/add_transaction.gif',
+    footerTransaksiGif: 'assets/theme/jjk2/footer_transaksi.gif',
+    tileGifs: const {
+      0: 'assets/theme/jjk2/mascot_utama.gif',
+      5: 'assets/theme/jjk2/footer_budget.gif',
+      9: 'assets/theme/jjk2/footer_statistik.gif',
+      15: 'assets/theme/jjk2/footer_setelan.gif',
+    },
+    footerGifManualControl: true,
+    defaultAccent: const Color(0xFF42A5FF),
+    lightBackground: const [Color(0xFFEAF5FF), Color(0xFFCFE8FF)],
+    darkBackground: const [Color(0xFF091828), Color(0xFF102A44)],
+  ),
+  ThemePreset(
     id: 'frieren',
     name: 'Frieren',
     icon: Icons.hourglass_empty,
@@ -393,25 +412,6 @@ final _allThemePresets = [
     darkBackground: const [Color(0xFF221C08), Color(0xFF2E260D)],
   ),
   ThemePreset(
-    id: 'jjk2',
-    name: 'JJK 2',
-    icon: Icons.circle,
-    emptyIcon: Icons.circle,
-    artwork: 'assets/theme/jjk2',
-    fabGif: 'assets/theme/jjk2/add_transaction.gif',
-    footerTransaksiGif: 'assets/theme/jjk2/footer_transaksi.gif',
-    tileGifs: const {
-      0: 'assets/theme/jjk2/mascot_utama.gif',
-      5: 'assets/theme/jjk2/footer_budget.gif',
-      9: 'assets/theme/jjk2/footer_statistik.gif',
-      15: 'assets/theme/jjk2/footer_setelan.gif',
-    },
-    footerGifManualControl: true,
-    defaultAccent: const Color(0xFF42A5FF),
-    lightBackground: const [Color(0xFFEAF5FF), Color(0xFFCFE8FF)],
-    darkBackground: const [Color(0xFF091828), Color(0xFF102A44)],
-  ),
-  ThemePreset(
     id: 'matcha',
     name: 'Matcha',
     icon: Icons.emoji_food_beverage,
@@ -431,6 +431,7 @@ const _liteThemeIds = {
   'kucing',
   'bebek',
   'call_duck',
+  'spongebob',
 };
 final themePresets = appFlavor == 'lite'
     ? _allThemePresets

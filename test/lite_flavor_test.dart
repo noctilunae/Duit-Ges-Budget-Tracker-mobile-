@@ -20,6 +20,7 @@ void main() {
         'kucing',
         'bebek',
         'call_duck',
+        'spongebob',
       });
       final settings = SettingsProvider();
       SharedPreferences.setMockInitialValues({'themeId': 'tema_lama'});
