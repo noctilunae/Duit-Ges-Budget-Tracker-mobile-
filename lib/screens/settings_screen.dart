@@ -361,7 +361,7 @@ class SettingsScreen extends StatelessWidget {
                   child: SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     title: Text('Mode Gelap'),
-                    subtitle: Text('Tampilan gelap biar adem di mata'),
+                    subtitle: Text('Bang Gelap '),
                     value: settings.darkMode,
                     onChanged: settings.setDarkMode,
                   ),
@@ -375,7 +375,7 @@ class SettingsScreen extends StatelessWidget {
                     title: const Text('Mulai hitung dari tanggal'),
                     subtitle: const Text(
                       'Saldo, budget, & statistik ngikutin '
-                      'periode ini (misal gajian tanggal 25)',
+                      'periode ini\n(misal gajian tanggal 25)',
                     ),
                     trailing: DropdownButton<int>(
                       value: settings.monthStartDay,
