@@ -431,7 +431,6 @@ const _liteThemeIds = {
   'kucing',
   'bebek',
   'call_duck',
-  'spongebob',
 };
 final themePresets = appFlavor == 'lite'
     ? _allThemePresets

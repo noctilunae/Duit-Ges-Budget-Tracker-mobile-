@@ -122,7 +122,8 @@ flutter:
       flavors: [full]
     - path: assets/theme/frieren_rial/
       flavors: [full]
-    - assets/theme/spongebob/
+    - path: assets/theme/spongebob/
+      flavors: [full]
     - path: assets/theme/jjk2/
       flavors: [full]
 
