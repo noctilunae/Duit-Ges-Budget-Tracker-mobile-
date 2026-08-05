@@ -80,6 +80,46 @@ class TransactionDetailSheet extends StatelessWidget {
 
   const TransactionDetailSheet({super.key, required this.transaction});
 
+  void _showReceipt(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => Dialog.fullscreen(
+        backgroundColor: Colors.black,
+        child: SafeArea(
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: InteractiveViewer(
+                  minScale: 0.5,
+                  maxScale: 5,
+                  child: Image.file(
+                    File(transaction.receiptPath!),
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, _, _) => const Center(
+                      child: Text(
+                        'Foto struk tidak ditemukan',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: IconButton.filled(
+                  tooltip: 'Tutup foto struk',
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _delete(BuildContext context) async {
     if (await confirmDeleteTransaction(context, transaction) &&
         context.mounted) {
@@ -173,16 +213,12 @@ class TransactionDetailSheet extends StatelessWidget {
           ),
           if (transaction.receiptPath != null) ...[
             const SizedBox(height: 16),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Image.file(
-                File(transaction.receiptPath!),
-                height: 140,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                // Decode secukupnya buat preview, jangan full resolusi
-                cacheWidth: 800,
-                errorBuilder: (_, _, _) => const SizedBox.shrink(),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _showReceipt(context),
+                icon: const Icon(Icons.receipt_long),
+                label: const Text('Lihat foto struk'),
               ),
             ),
           ],
