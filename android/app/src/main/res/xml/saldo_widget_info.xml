@@ -11,4 +11,5 @@
     android:initialLayout="@layout/saldo_widget"
     android:previewLayout="@layout/saldo_widget"
     android:updatePeriodMillis="1800000"
+    android:icon="@mipmap/ic_launcher"
     android:description="@string/saldo_widget_desc" />

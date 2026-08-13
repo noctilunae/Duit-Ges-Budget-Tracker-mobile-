@@ -1,7 +1,31 @@
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:flutter/material.dart';
+
 const customIconPixels = 160;
+
+ui.Rect iconCropSourceRect({
+  required ui.Size imageSize,
+  required double previewSize,
+  required double baseScale,
+  required Matrix4 transform,
+}) {
+  final inverse = Matrix4.inverted(transform);
+  final topLeft = MatrixUtils.transformPoint(inverse, ui.Offset.zero);
+  final bottomRight = MatrixUtils.transformPoint(
+    inverse,
+    ui.Offset(previewSize, previewSize),
+  );
+  final previewRect = ui.Rect.fromPoints(topLeft, bottomRight);
+  final source = ui.Rect.fromLTWH(
+    previewRect.left / baseScale,
+    previewRect.top / baseScale,
+    previewRect.width / baseScale,
+    previewRect.height / baseScale,
+  );
+  return source.intersect(ui.Offset.zero & imageSize);
+}
 
 Future<Uint8List> cropIconImage(ui.Image image, ui.Rect source) async {
   final recorder = ui.PictureRecorder();

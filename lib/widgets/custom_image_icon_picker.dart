@@ -198,23 +198,17 @@ class _IconCropDialogState extends State<_IconCropDialog> {
 
   Future<void> _save() async {
     final size = _cropSize!;
-    final matrix = _transform.value;
-    final zoom = matrix.getMaxScaleOnAxis();
-    final x = (-matrix.storage[12] / zoom / _baseScale).clamp(
-      0.0,
-      widget.image.width - 1.0,
+    final source = iconCropSourceRect(
+      imageSize: ui.Size(
+        widget.image.width.toDouble(),
+        widget.image.height.toDouble(),
+      ),
+      previewSize: size,
+      baseScale: _baseScale,
+      transform: _transform.value,
     );
-    final y = (-matrix.storage[13] / zoom / _baseScale).clamp(
-      0.0,
-      widget.image.height - 1.0,
-    );
-    final maxSide = math.min(widget.image.width - x, widget.image.height - y);
-    final side = (size / zoom / _baseScale).clamp(1.0, maxSide);
     setState(() => _saving = true);
-    final bytes = await cropIconImage(
-      widget.image,
-      ui.Rect.fromLTWH(x, y, side, side),
-    );
+    final bytes = await cropIconImage(widget.image, source);
     if (mounted) Navigator.pop(context, bytes);
   }
 

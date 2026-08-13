@@ -147,6 +147,44 @@ void main() {
     croppedCodec.dispose();
   });
 
+  test('crop ikon memakai area yang sama persis dengan box preview', () {
+    const imageSize = Size(400, 200);
+    const previewSize = 240.0;
+    const baseScale = 1.2;
+    final transform = Matrix4.identity()
+      ..translateByDouble(-360, -120, 0, 1)
+      ..scaleByDouble(2, 2, 1, 1);
+
+    final source = iconCropSourceRect(
+      imageSize: imageSize,
+      previewSize: previewSize,
+      baseScale: baseScale,
+      transform: transform,
+    );
+
+    expect(source.left, closeTo(150, 0.0001));
+    expect(source.top, closeTo(50, 0.0001));
+    expect(source.width, closeTo(100, 0.0001));
+    expect(source.height, closeTo(100, 0.0001));
+    expect(source.center, const Offset(200, 100));
+  });
+
+  test('box preview awal mengambil crop tengah untuk foto landscape', () {
+    const imageSize = Size(400, 200);
+    const previewSize = 240.0;
+    const baseScale = 1.2;
+    final transform = Matrix4.identity()..translateByDouble(-120, 0, 0, 1);
+
+    final source = iconCropSourceRect(
+      imageSize: imageSize,
+      previewSize: previewSize,
+      baseScale: baseScale,
+      transform: transform,
+    );
+
+    expect(source, const Rect.fromLTWH(100, 0, 200, 200));
+  });
+
   test('target custom menyimpan ikon emoji', () {
     const goal = Goal(name: 'Liburan', target: 5000000, iconKey: 'emoji:🏝️');
     expect(Goal.fromMap(goal.toMap()).emoji, '🏝️');
