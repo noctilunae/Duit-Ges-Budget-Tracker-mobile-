@@ -14,6 +14,7 @@ import '../screens/add_transaction_screen.dart';
 import '../utils/app_style.dart';
 import '../utils/formatters.dart';
 import 'animated_widgets.dart';
+import 'transfer_sheet.dart';
 
 /// Buka detail transaksi sebagai bottom sheet (modal slide dari bawah).
 Future<void> showTransactionDetailSheet(
@@ -289,8 +290,20 @@ class TransactionDetailSheet extends StatelessWidget {
                   ),
                 ),
               ),
-              // Transfer ga bisa diedit satuan (dia sepasang keluar-masuk),
-              // cuma bisa dihapus terus dibikin ulang.
+              if (transaction.isTransfer) ...[
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: () {
+                      final parentContext = Navigator.of(context).context;
+                      Navigator.pop(context);
+                      showTransferSheet(parentContext, existing: transaction);
+                    },
+                    icon: const Icon(Icons.edit_outlined, size: 18),
+                    label: const Text('Edit'),
+                  ),
+                ),
+              ],
               if (!transaction.isTransfer && !transaction.isManagedPayment) ...[
                 const SizedBox(width: 12),
                 Expanded(

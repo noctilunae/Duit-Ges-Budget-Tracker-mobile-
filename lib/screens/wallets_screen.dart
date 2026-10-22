@@ -29,37 +29,54 @@ class WalletsScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: cardShadow(context),
               ),
-              child: ListTile(
-                onTap: () => _showWalletSheet(context, existing: wallet),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                leading: Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: categoryGradient(wallet.color),
+              child: Material(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(16),
+                child: ListTile(
+                  onTap: () => _showWalletSheet(context, existing: wallet),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Center(
-                    child: wallet.iconWidget(color: Colors.white, size: 22),
+                  leading: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: categoryGradient(wallet.color),
+                    ),
+                    child: Center(
+                      child: wallet.iconWidget(color: Colors.white, size: 22),
+                    ),
+                  ),
+                  title: Text(
+                    wallet.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                  subtitle: Text(
+                    rupiah(provider.balanceOf(wallet)),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  trailing: IconButton(
+                    tooltip: wallet.id == provider.defaultWalletId
+                        ? 'Dompet default'
+                        : 'Jadikan dompet default',
+                    onPressed: () => provider.setDefaultWallet(wallet.id!),
+                    icon: Icon(
+                      wallet.id == provider.defaultWalletId
+                          ? Icons.star_rounded
+                          : Icons.star_outline_rounded,
+                      color: wallet.id == provider.defaultWalletId
+                          ? Theme.of(context).colorScheme.primary
+                          : null,
+                    ),
                   ),
                 ),
-                title: Text(
-                  wallet.name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
-                ),
-                subtitle: Text(
-                  rupiah(provider.balanceOf(wallet)),
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                trailing: const Icon(Icons.edit_outlined, size: 18),
               ),
             ),
           const SizedBox(height: 8),

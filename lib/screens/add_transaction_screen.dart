@@ -74,6 +74,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       _type = widget.transactionType ?? TxType.expense;
       _categoryId = widget.categoryId;
     }
+    final wallets = context.read<WalletProvider>();
+    _walletId ??= wallets.defaultWalletId;
+    final index = wallets.wallets.indexWhere(
+      (wallet) => wallet.id == _walletId,
+    );
+    if (index >= 0) _walletPage = index ~/ 2;
   }
 
   @override
@@ -128,7 +134,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         time.minute,
       ),
       type: _type,
-      walletId: _walletId ?? wallets.first.id ?? 1,
+      walletId:
+          _walletId ??
+          context.read<WalletProvider>().defaultWalletId ??
+          wallets.first.id ??
+          1,
       receiptPath: _receiptPath,
       sourceType: widget.existing?.sourceType,
       sourceId: widget.existing?.sourceId,
@@ -392,7 +402,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           Builder(
             builder: (context) {
               final wallets = context.watch<WalletProvider>().wallets;
-              final selectedId = _walletId ?? wallets.firstOrNull?.id;
+              final selectedId =
+                  _walletId ?? context.watch<WalletProvider>().defaultWalletId;
               // Cuma 2 dompet per halaman; panah kanan muter ke
               // halaman berikutnya (wrap-around).
               const perPage = 2;

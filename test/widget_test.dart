@@ -803,6 +803,93 @@ void main() {
     expect(second.selection.baseOffset, 2);
   });
 
+  test('hapus nominal hingga sisa nol mengosongkan input', () {
+    final formatter = RibuanInputFormatter();
+    for (final previous in ['15.000', '1.000', '100', '0']) {
+      final result = formatter.formatEditUpdate(
+        TextEditingValue(text: previous),
+        const TextEditingValue(
+          text: '00',
+          selection: TextSelection.collapsed(offset: 0),
+        ),
+      );
+      // '0' → '00' merupakan penambahan, bukan penghapusan.
+      expect(result.text, previous == '0' ? '0' : '');
+      expect(result.selection.baseOffset, 0);
+    }
+    expect(
+      formatter
+          .formatEditUpdate(
+            TextEditingValue.empty,
+            const TextEditingValue(
+              text: '0',
+              selection: TextSelection.collapsed(offset: 1),
+            ),
+          )
+          .text,
+      '0',
+    );
+  });
+
+  testWidgets('hapus 15 dari 15.000 lalu ketik ulang memulai shortcut baru', (
+    tester,
+  ) async {
+    final controller = TextEditingController();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: TextField(
+            controller: controller,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              RibuanInputFormatter(),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.showKeyboard(find.byType(TextField));
+    tester.testTextInput.updateEditingValue(
+      const TextEditingValue(
+        text: '1',
+        selection: TextSelection.collapsed(offset: 1),
+      ),
+    );
+    expect(controller.text, '1.000');
+    tester.testTextInput.updateEditingValue(
+      const TextEditingValue(
+        text: '15.000',
+        selection: TextSelection.collapsed(offset: 2),
+      ),
+    );
+    expect(controller.text, '15.000');
+    tester.testTextInput.updateEditingValue(
+      const TextEditingValue(
+        text: '1.000',
+        selection: TextSelection.collapsed(offset: 1),
+      ),
+    );
+    expect(controller.text, '1.000');
+    tester.testTextInput.updateEditingValue(
+      const TextEditingValue(
+        text: '.000',
+        selection: TextSelection.collapsed(offset: 0),
+      ),
+    );
+    expect(controller.text, isEmpty);
+    expect(controller.selection.baseOffset, 0);
+    tester.testTextInput.updateEditingValue(
+      const TextEditingValue(
+        text: '2',
+        selection: TextSelection.collapsed(offset: 1),
+      ),
+    );
+    expect(controller.text, '2.000');
+    expect(controller.selection.baseOffset, 1);
+    await tester.pumpWidget(const SizedBox.shrink());
+    controller.dispose();
+  });
+
   test('SettingsProvider menandai data siap setelah load', () async {
     SharedPreferences.setMockInitialValues({'themeId': 'kucing'});
     final settings = SettingsProvider();

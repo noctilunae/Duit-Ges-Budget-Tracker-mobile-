@@ -43,7 +43,14 @@ class RibuanInputFormatter extends TextInputFormatter {
     if (oldValue.text.isEmpty && digits.length == 1) digits += '000';
     // Buang nol di depan (misal "0500" jadi "500"), sisain satu nol doang.
     digits = digits.replaceFirst(RegExp(r'^0+(?=\d)'), '');
-    if (digits.isEmpty) return const TextEditingValue(text: '');
+    // Menghapus angka utama juga membuang sisa nol shortcut (1.000 → kosong).
+    final deleting = newValue.text.length < oldValue.text.length;
+    if (digits.isEmpty || (deleting && digits == '0')) {
+      return const TextEditingValue(
+        text: '',
+        selection: TextSelection.collapsed(offset: 0),
+      );
+    }
     final formatted = groupRibuan(digits);
     var cursor = 0;
     while (cursor < formatted.length && digitsBeforeCursor > 0) {

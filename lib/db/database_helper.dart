@@ -996,6 +996,71 @@ class DatabaseHelper {
 
   /// Transfer antar dompet = sepasang transaksi kategori khusus,
   /// dibikin atomik (dua-duanya masuk atau dua-duanya batal).
+  Future<List<TransactionModel>> transferTransactions(int id) async =>
+      _transferTransactions(await database, id);
+
+  Future<List<TransactionModel>> _transferTransactions(
+    DatabaseExecutor db,
+    int id,
+  ) async {
+    final rows = await db.query(
+      'transactions',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    if (rows.isEmpty) throw StateError('Transfer tidak ditemukan');
+    final target = TransactionModel.fromMap(rows.single);
+    if (!target.isTransfer) throw StateError('Bukan transaksi transfer');
+    final pair = await db.rawQuery(
+      'SELECT * FROM transactions '
+      'WHERE category_id = ? AND amount = ? AND date = ? AND note = ? '
+      'AND id != ? ORDER BY ABS(id - ?) LIMIT 1',
+      [
+        target.categoryId == transferOut.id ? transferIn.id : transferOut.id,
+        rows.single['amount'],
+        rows.single['date'],
+        rows.single['note'],
+        id,
+        id,
+      ],
+    );
+    if (pair.isEmpty) throw StateError('Pasangan transfer tidak ditemukan');
+    final other = TransactionModel.fromMap(pair.single);
+    return target.categoryId == transferOut.id
+        ? [target, other]
+        : [other, target];
+  }
+
+  Future<void> updateTransfer({
+    required int id,
+    required int fromWalletId,
+    required int toWalletId,
+    required double amount,
+    required DateTime date,
+    String note = '',
+  }) async {
+    if (fromWalletId == toWalletId || !amount.isFinite || amount.round() <= 0) {
+      throw ArgumentError('Dompet atau nominal transfer tidak valid');
+    }
+    final db = await database;
+    await db.transaction((txn) async {
+      final pair = await _transferTransactions(txn, id);
+      for (var index = 0; index < pair.length; index++) {
+        await txn.update(
+          'transactions',
+          {
+            'wallet_id': index == 0 ? fromWalletId : toWalletId,
+            'amount': amount.round(),
+            'date': date.toIso8601String(),
+            'note': note,
+          },
+          where: 'id = ?',
+          whereArgs: [pair[index].id],
+        );
+      }
+    });
+  }
+
   Future<void> insertTransfer({
     required int fromWalletId,
     required int toWalletId,
@@ -1003,6 +1068,9 @@ class DatabaseHelper {
     required DateTime date,
     String note = '',
   }) async {
+    if (fromWalletId == toWalletId || !amount.isFinite || amount.round() <= 0) {
+      throw ArgumentError('Dompet atau nominal transfer tidak valid');
+    }
     final db = await database;
     await db.transaction((txn) async {
       await txn.insert('transactions', {

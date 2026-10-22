@@ -1,6 +1,7 @@
 import 'dart:async' show unawaited;
 
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../db/database_helper.dart';
 import '../models/wallet.dart';
@@ -14,6 +15,17 @@ class WalletProvider extends ChangeNotifier {
   int _syncedTransactionRevision = 0;
 
   List<Wallet> get wallets => _wallets;
+  int? _defaultWalletId;
+  int? get defaultWalletId =>
+      byId(_defaultWalletId ?? -1)?.id ?? _wallets.firstOrNull?.id;
+
+  Future<void> setDefaultWallet(int id) async {
+    if (byId(id) == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('defaultWalletId', id);
+    _defaultWalletId = id;
+    notifyListeners();
+  }
 
   /// Saldo dompet = saldo awal + (semua pemasukan - pengeluaran).
   double balanceOf(Wallet wallet) =>
@@ -29,6 +41,8 @@ class WalletProvider extends ChangeNotifier {
   }
 
   Future<void> load() async {
+    final prefs = await SharedPreferences.getInstance();
+    _defaultWalletId = prefs.getInt('defaultWalletId');
     _wallets = await _db.wallets();
     _flows = await _db.walletFlows();
     notifyListeners();

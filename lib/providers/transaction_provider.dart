@@ -162,14 +162,27 @@ class TransactionProvider extends ChangeNotifier {
     required int toWalletId,
     required double amount,
     String note = '',
+    DateTime? date,
+    int? existingId,
   }) async {
-    await _db.insertTransfer(
-      fromWalletId: fromWalletId,
-      toWalletId: toWalletId,
-      amount: amount,
-      date: DateTime.now(),
-      note: note,
-    );
+    if (existingId != null) {
+      await _db.updateTransfer(
+        id: existingId,
+        fromWalletId: fromWalletId,
+        toWalletId: toWalletId,
+        amount: amount,
+        date: date ?? DateTime.now(),
+        note: note,
+      );
+    } else {
+      await _db.insertTransfer(
+        fromWalletId: fromWalletId,
+        toWalletId: toWalletId,
+        amount: amount,
+        date: date ?? DateTime.now(),
+        note: note,
+      );
+    }
     _walletRevision++;
     await load();
     unawaited(WidgetService.update());
